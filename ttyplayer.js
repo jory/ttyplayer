@@ -83,36 +83,39 @@ function TTYPlayer () {
 				}
 				else if (c == 'H') {
 					if (value == '') {
-						// How to move to there?
-						point.x = 1;
-						point.y = 1;
+						// point.x = 1;
+						// point.y = 1;
 					}
 					else {
+						var n = point.y;
+						var m = point.x;
+
 						var values = value.split(';');
 
-						var n = point.y;
 						if (values[0] != '') {
-							n = values[0];
+							n = parseInt(values[0]);
 						}
-
-						var diff = n - point.y - 1;
-
-						for (var i = 0; i < diff; i++) {
-							output.push('<div>&nbsp;</div>');
-							point.x = 1;  // Shouldn't set this in a for loop.
-						}
-
-						point.y = n;
-
-						var m = point.x;
 						if (values.length == 2) {
-							m = values[1];
+							m = parseInt(values[1]);
 						}
+
+						if (n > point.y) {
+							var diff = n - point.y;
+
+							output.push('<br/>');
+							for (var i = 1; i < diff; i++) {
+								output.push('<div>&nbsp;</div>');
+							}
+
+							point.y = n;
+							point.x = 1;
+						}
+
 
 						var diff = m - point.x - 1;						
 
 						output.push('<span>');
-						for (var i = 0; i < m; i++) {
+						for (var i = 0; i < diff; i++) {
 							output.push('&nbsp');
 						}
 						output.push('</span>');
