@@ -1,0 +1,24 @@
+
+.black-bg {
+	background-color: #000000;
+}
+
+.green-bg {
+	background-color: #00BB00;
+}
+
+.white-fg {
+	color: #FFFFFF;
+}
+
+.yellow-fg {
+	color: #BBBB00;
+}
+
+.light-yellow-fg {
+	color: #FFFF55;
+}
+
+.bold {
+	font-weight: bold;
+}
