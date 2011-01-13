@@ -18,12 +18,19 @@ function TTYPlayer () {
 				output.push('<span class="' + span.light + span.foreground +
 							' ' + span.background + '">');
 				if (index == -1) {
-					output.push(string);
 					point.x += string.length;
+					if (string.indexOf(' ') != -1) {
+						string = string.replace(/ /g, '&nbsp;');
+					}
+					output.push(string);
 					string = '';
 				}
 				else {
-					output.push(string.slice(0, index));
+					var substring = string.slice(0, index);
+					if (substring.indexOf(' ') != -1) {
+						substring = substring.replace(/ /g, '&nbsp;');
+					}
+					output.push(substring);
 					point.x += index;
 					string = string.slice(index);
 				}
@@ -112,7 +119,7 @@ function TTYPlayer () {
 						}
 
 
-						var diff = m - point.x - 1;						
+						var diff = m - point.x;
 
 						output.push('<span>');
 						for (var i = 0; i < diff; i++) {
@@ -124,8 +131,28 @@ function TTYPlayer () {
 					}
 				}
 				else if (c == 'G') {
+					var m = parseInt(value);
+
+					var diff = m - point.x;
+
+					output.push('<span>');
+					for (var i = 0; i < diff; i++) {
+						output.push('&nbsp');
+					}
+					output.push('</span>');
+
+					point.x = m;
 				}
 				else if (c == 'J') {
+					var n = parseInt(value);
+					if (n == 2) {
+						frame.empty();
+						point.x = 1;
+						point.y = 1;
+					}
+					else {
+						console.error('Unhandled value for J: ' + value);
+					}
 				}
 				else {
 					console.error('Unhandled escape sequence: ' + match[0]);
@@ -139,7 +166,9 @@ function TTYPlayer () {
 			frame.empty();
 
 			// Until we know what this character does, get rid of it outright.
-			string.replace(/\\x0f/g, '');
+			string = string.replace(/\x0f/g, '');
+
+			console.log(string);
 
 			while (string != '') {
 				var index = string.search(regexp);
@@ -149,7 +178,7 @@ function TTYPlayer () {
 				}
 				else if (index > 0) {
 					print(index);
-					handle_esc();
+					// handle_esc();
 				}
 				else if (index == 0) {
 					handle_esc();
