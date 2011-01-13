@@ -15,6 +15,8 @@ function TTYPlayer () {
 			var output = [];
 
 			var print = function(index) {
+				output.push('<span class="' + span.light + span.foreground +
+							' ' + span.background + '">');
 				if (index == -1) {
 					output.push(string);
 					point.x += string.length;
@@ -25,6 +27,7 @@ function TTYPlayer () {
 					point.x += index;
 					string = string.slice(index);
 				}
+				output.push('</span>');
 			};
 
 			var handle_esc = function() {
@@ -34,33 +37,88 @@ function TTYPlayer () {
 
 				if (c == 'm') {
 					if (value == '') {
-						output.push('<span class="black-bg white-fg">');
-						num_open_spans += 1;						
+						span.foreground = 'white-fg';
+						span.background = 'black-bg';
+						span.light = '';
 					}
 					else {
 						var values = value.split(';');
 						var l = values.length;
 						for (var i = 0; i < l; i++) {
 							var val = values[i];
-							output.push('<span class="');
 							if (val == '0') {
-								output.push('black-bg white-fg');
+								span.foreground = 'white-fg';
+								span.background = 'black-bg';
+								span.light = '';
 							}
 							else if (val == '1') {
-								output.push('bold');
+								span.light = 'light-';
+							}
+							else if (val == '30') {
+								span.foreground = 'black-fg';
 							}
 							else if (val == '33') {
-								output.push('yellow-fg');
+								span.foreground = 'yellow-fg';
+							}
+							else if (val == '37') {
+								span.foreground = 'white-fg';
+							}
+							else if (val == '39') {
+								span.foreground = 'white-fg';
+							}
+							else if (val == '40') {
+								span.background = 'black-bg';
+							}
+							else if (val == '42') {
+								span.background = 'green-bg';
+							}
+							else if (val == '49') {
+								span.background = 'black-bg';
 							}
 							else {
 								console.error('Unhandled SGR parameter: ' + val);
 							}
-							output.push('">');
-							num_open_spans += 1;
 						}
 					}
 				}
 				else if (c == 'H') {
+					if (value == '') {
+						// How to move to there?
+						point.x = 1;
+						point.y = 1;
+					}
+					else {
+						var values = value.split(';');
+
+						var n = point.y;
+						if (values[0] != '') {
+							n = values[0];
+						}
+
+						var diff = n - point.y - 1;
+
+						for (var i = 0; i < diff; i++) {
+							output.push('<div>&nbsp;</div>');
+							point.x = 1;  // Shouldn't set this in a for loop.
+						}
+
+						point.y = n;
+
+						var m = point.x;
+						if (values.length == 2) {
+							m = values[1];
+						}
+
+						var diff = m - point.x - 1;						
+
+						output.push('<span>');
+						for (var i = 0; i < m; i++) {
+							output.push('&nbsp');
+						}
+						output.push('</span>');
+
+						point.x = m;
+					}
 				}
 				else if (c == 'G') {
 				}
@@ -72,6 +130,10 @@ function TTYPlayer () {
 
 				string = string.slice(match[0].length);
 			};
+
+			// Done with definitions!
+
+			frame.empty();
 
 			// Until we know what this character does, get rid of it outright.
 			string.replace(/\\x0f/g, '');
@@ -91,10 +153,6 @@ function TTYPlayer () {
 				}			
 			}
 
-			for (var i = 0; i < num_open_spans; i++) {
-				output.push('</span>');
-			}
-
 			// Now append the whole chunk to the frame.
 			frame.append(output.join(''));
 		}
@@ -106,5 +164,6 @@ var t = "\x1b[39;49m\x1b[37m\x1b[40m\x1b[H\x1b[2J\x1b[33m\x1b[40mWelcome, Shy.\x
 var p;
 
 $().ready(function() {
-				  p = TTYPlayer();
+			  p = TTYPlayer();
+			  p.render_frame(t);
 		  });
