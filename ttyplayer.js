@@ -1,7 +1,38 @@
 function TTYPlayer () {
 	var frame = $('#frame');
+	var binary = null;
+	var ttyrec = null;
+
 	return {
-		render_frame: function(data) {
+		get_ttyrec: function() {
+			return ttyrec;
+		},
+
+		parse_data: function (input) {
+			binary = input.binaryResponse;
+			ttyrec = [];
+
+			var length = binary.getLength();
+			var offset = 0;
+
+			while (offset < length) {
+				var sec = binary.getLongAt(offset + 0, false);
+				var usec = binary.getLongAt(offset + 4, false);
+				var len = binary.getLongAt(offset + 8, false);
+				var address = offset + 12;
+
+				ttyrec.push({ 
+								sec: sec,
+								usec: usec,
+								len: len,
+								address: address
+							});
+
+				offset += (12 + len);				
+			}			
+		},
+
+		render_frame: function (data) {
 			var string = data;
 
 			var point = { x : 1, y : 1 };
@@ -198,4 +229,5 @@ var p;
 $().ready(function() {
 			  p = TTYPlayer();
 			  p.render_frame(t);
+			  BinaryAjax('foo.ttyrec', function (data) { p.parse_data(data); });
 		  });
