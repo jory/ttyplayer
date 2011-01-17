@@ -2,10 +2,29 @@ function TTYPlayer () {
 	var frame = $('#frame');
 	var binary = null;
 	var ttyrec = null;
+	var index = 0;
 
 	return {
 		get_ttyrec: function() {
 			return ttyrec;
+		},
+
+		next_frame: function() {
+			if (index < ttyrec.length) {
+				var t = ttyrec[index];
+				var s = binary.getStringAt(t.address, t.len);
+				p.render_frame(s);
+				index += 1;
+			}
+		},
+
+		previous_frame: function() {
+			if (index > 0) {
+				var t = ttyrec[index];
+				var s = binary.getStringAt(t.address, t.len);
+				p.render_frame(s);
+				index -= 1;
+			}
 		},
 
 		parse_data: function (input) {
