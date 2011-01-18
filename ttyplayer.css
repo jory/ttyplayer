@@ -1,22 +1,129 @@
-
 .black-bg {
 	background-color: #000000;
+}
+
+.red-bg {
+	background-color: #BB0000;
 }
 
 .green-bg {
 	background-color: #00BB00;
 }
 
-.white-fg {
-	color: #FFFFFF;
+.yellow-bg {
+	background-color: #BBBB00;
+}
+
+.blue-bg {
+	background-color: #0000BB;
+}
+
+.magenta-bg {
+	background-color: #BB00BB;
+}
+
+.cyan-bg {
+	background-color: #00BBBB;
+}
+
+.white-bg {
+	background-color: #BBBBBB;
+}
+
+.light-black-bg {
+	background-color: #555555;
+}
+
+.light-red-bg {
+	background-color: #FF5555;
+}
+
+.light-green-bg {
+	background-color: #31E722;
+}
+
+.light-yellow-bg {
+	background-color: #FFFF55;
+}
+
+.light-blue-bg {
+	background-color: #5555FF;
+}
+
+.light-magenta-bg {
+	background-color: #FF55FF;
+}
+
+.light-cyan-bg {
+	background-color: #55FFFF;
+}
+
+.light-white-bg {
+	background-color: #FFFFFF;
+}
+
+.black-fg {
+	color: #000000;
+}
+
+.red-fg {
+	color: #BB0000;
+}
+
+.green-fg {
+	color: #00BB00;
 }
 
 .yellow-fg {
 	color: #BBBB00;
 }
 
+.blue-fg {
+	color: #0000BB;
+}
+
+.magenta-fg {
+	color: #BB00BB;
+}
+
+.cyan-fg {
+	color: #00BBBB;
+}
+
+.white-fg {
+	color: #BBBBBB;
+}
+
+.light-black-fg {
+	color: #555555;
+}
+
+.light-red-fg {
+	color: #FF5555;
+}
+
+.light-green-fg {
+	color: #31E722;
+}
+
 .light-yellow-fg {
 	color: #FFFF55;
+}
+
+.light-blue-fg {
+	color: #5555FF;
+}
+
+.light-magenta-fg {
+	color: #FF55FF;
+}
+
+.light-cyan-fg {
+	color: #55FFFF;
+}
+
+.light-white-fg {
+	color: #FFFFFF;
 }
 
 .bold {
