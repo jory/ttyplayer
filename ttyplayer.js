@@ -9,7 +9,7 @@ function TTYPlayer () {
 	};
 	var render_frame = function (string) {
 
-		var regexp = new RegExp('\\x1b\\[([0-9;]*)([dmGHJX])');
+		var regexp = new RegExp('\\x1b\\[([0-9;]*)([A-Za-z])');
 		var span = {
 			foreground: 'white-fg',
 			background: 'black-bg',
