@@ -164,6 +164,8 @@ function TTYPlayer () {
 		};
 
 		var print_buffer = function () {
+			frame.empty();			
+
 			var m = buffer.length;
 			for	(var i = 0; i < m; i++) {
 				var row = buffer[i];
