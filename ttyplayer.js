@@ -7,10 +7,203 @@ function TTYPlayer () {
 	var point = {
 		x: 1, y: 1
 	};
+	var render_frame = function (string) {
+
+		var regexp = new RegExp('\\x1b\\[([0-9;]*)([dmGHJX])');
+		var span = {
+			foreground: 'white-fg',
+			background: 'black-bg',
+			light: ''
+		};
+
+		var output_characters = function (index) {
+			var substring = '';
+
+			if (index == -1) {
+				substring = string;
+				string = '';
+			} 
+			else {
+				substring = string.slice(0, index);
+				string = string.slice(index);
+			}
+			
+			var pre = '<span class="' + span.light + span.foreground + ' ' +
+				span.background + '">';
+			var post = '</span>';
+
+			for (var i in substring) {
+				var character = substring[i];
+				if (character == ' ') {
+					character = '&nbsp;';
+				}
+
+				buffer[point.y - 1][point.x - 1] = pre + character + post;
+				point.x++;
+			}
+		};
+
+		var handle_esc = function() {
+			var match = string.match(regexp);
+			var value = match[1];
+			var c = match[2];
+
+			if (c == 'm') {
+				if (value == '') {
+					span.foreground = 'white-fg';
+					span.background = 'black-bg';
+					span.light = '';
+				}
+				else {
+					var values = value.split(';');
+					var l = values.length;
+					for (var i = 0; i < l; i++) {
+						var val = values[i];
+						if (val == '0') {
+							span.foreground = 'white-fg';
+							span.background = 'black-bg';
+							span.light = '';
+						}
+						else if (val == '1') {
+							span.light = 'light-';
+						}
+						else if (val == '30') {
+							span.foreground = 'black-fg';
+						}
+						else if (val == '33') {
+							span.foreground = 'yellow-fg';
+						}
+						else if (val == '37') {
+							span.foreground = 'white-fg';
+						}
+						else if (val == '39') {
+							span.foreground = 'white-fg';
+						}
+						else if (val == '40') {
+							span.background = 'black-bg';
+						}
+						else if (val == '42') {
+							span.background = 'green-bg';
+						}
+						else if (val == '49') {
+							span.background = 'black-bg';
+						}
+						else {
+							console.error('Unhandled SGR parameter: ' + val);
+						}
+					}
+				}
+			}
+			else if (c == 'H') {
+				// Moves the point
+				if (value == '') {
+					point.x = 1;
+					point.y = 1;
+				}
+				else {
+					var values = value.split(';');
+
+					if (values[0] != '') {
+						var n = parseInt(values[0]);
+						for (var i = 0; i + point.y < n; i++) {
+							if (buffer[point.y + i] == undefined) {
+								buffer[point.y + i] = [];
+							}
+						}
+						point.y = n;
+					}
+					else {
+						point.y = 1;
+					}
+
+					if (values.length == 2) {
+						point.x = parseInt(values[1]);
+					}
+					else {
+						point.x = 1;
+					}
+				}
+			}
+			else if (c == 'G') {
+				// Moves the point horizontally.
+				point.x = parseInt(value);
+			}
+			else if (c == 'J') {
+				// Clear the buffer
+				if (value == '') {
+					// Same as 0 case,
+					// clear from point to end of buffer.
+					console.error('[J needs implementing');
+				}
+				else {
+					var n = parseInt(value);
+					if (n == 0) {
+						// Same as empty case,
+						// clear from point to end of buffer.
+						console.error('[0J needs implementing');
+					}
+					else if (n == 1) {
+						// Clear from point to beginning of buffer.
+						console.error('[1J needs implementing');
+					}
+					else if (n == 2) {
+						buffer = [[]];
+						point.x = 1;
+						point.y = 1;
+					}
+					else {
+						console.error('Unhandled value for J: ' + value);
+					}
+				}
+			}
+			else {
+				console.error('Unhandled escape sequence: ' + match[0]);
+			}
+
+			string = string.slice(match[0].length);
+		};
+
+		var print_buffer = function () {
+			var m = buffer.length;
+			for	(var i = 0; i < m; i++) {
+				var row = buffer[i];
+				var n = row.length;
+				for (var j = 0; j < n; j++) {
+					var character = row[j];
+					if (character == undefined) {
+						character = '<span>&nbsp;</span>';
+					}
+					frame.append(character);
+				}
+				frame.append('<br/>');
+			}
+		};
+
+		string = string.replace(/\x0f/g, '');
+
+		while (string != '') {
+			var index = string.search(regexp);
+
+			if (index == -1 || index > 0) {
+				output_characters(index);
+			}
+			else if (index == 0) {
+				handle_esc();
+			}			
+		}
+		
+		print_buffer();
+	};
 
 	return {
 		get_ttyrec: function() {
 			return ttyrec;
+		},
+
+		clear_frame: function() {
+			buffer = [[]];
+			point = { x:1, y: 1};
+			render_frame('');
 		},
 
 		next_frame: function() {
@@ -55,192 +248,7 @@ function TTYPlayer () {
 			}			
 		},
 
-		render_frame: function (string) {
-
-			var regexp = new RegExp('\\x1b\\[([0-9;]*)([dmGHJX])');
-			var span = {
-				foreground: 'white-fg',
-				background: 'black-bg',
-				light: ''
-			};
-
-			var output_characters = function (index) {
-				var substring = '';
-
-				if (index == -1) {
-					substring = string;
-				} 
-				else {
-					substring = string.slice(0, index);
-					string = string.slice(index);
-				}
-	
-				var pre = '<span class="' + span.light + span.foreground + ' ' +
-					span.background + '">';
-				var post = '</span>';
-
-				for (var i in substring) {
-					var character = substring[i];
-					if (character == ' ') {
-						character = '&nbsp;';
-					}
-
-					buffer[point.y - 1][point.x - 1] = pre + character + post;
-					point.x++;
-				}
-			};
-
-			var handle_esc = function() {
-				var match = string.match(regexp);
-				var value = match[1];
-				var c = match[2];
-
-				if (c == 'm') {
-					if (value == '') {
-						span.foreground = 'white-fg';
-						span.background = 'black-bg';
-						span.light = '';
-					}
-					else {
-						var values = value.split(';');
-						var l = values.length;
-						for (var i = 0; i < l; i++) {
-							var val = values[i];
-							if (val == '0') {
-								span.foreground = 'white-fg';
-								span.background = 'black-bg';
-								span.light = '';
-							}
-							else if (val == '1') {
-								span.light = 'light-';
-							}
-							else if (val == '30') {
-								span.foreground = 'black-fg';
-							}
-							else if (val == '33') {
-								span.foreground = 'yellow-fg';
-							}
-							else if (val == '37') {
-								span.foreground = 'white-fg';
-							}
-							else if (val == '39') {
-								span.foreground = 'white-fg';
-							}
-							else if (val == '40') {
-								span.background = 'black-bg';
-							}
-							else if (val == '42') {
-								span.background = 'green-bg';
-							}
-							else if (val == '49') {
-								span.background = 'black-bg';
-							}
-							else {
-								console.error('Unhandled SGR parameter: ' + val);
-							}
-						}
-					}
-				}
-				else if (c == 'H') {
-					// Moves the point
-					if (value == '') {
-						point.x = 1;
-						point.y = 1;
-					}
-					else {
-						var values = value.split(';');
-
-						if (values[0] != '') {
-							var n = parseInt(values[0]);
-							for (var i = 0; i + point.y < n; i++) {
-								if (buffer[point.y + i] == undefined) {
-									buffer[point.y + i] = [];
-								}
-							}
-							point.y = n;
-						}
-						else {
-							point.y = 1;
-						}
-
-						if (values.length == 2) {
-							point.x = parseInt(values[1]);
-						}
-						else {
-							point.x = 1;
-						}
-					}
-				}
-				else if (c == 'G') {
-					// Moves the point horizontally.
-					point.x = parseInt(value);
-				}
-				else if (c == 'J') {
-					// Clear the buffer
-					if (value == '') {
-						// Same as 0 case,
-						// clear from point to end of buffer.
-						console.error('[J needs implementing');
-					}
-					else {
-						var n = parseInt(value);
-						if (n == 0) {
-							// Same as empty case,
-							// clear from point to end of buffer.
-							console.error('[0J needs implementing');
-						}
-						else if (n == 1) {
-							// Clear from point to beginning of buffer.
-							console.error('[1J needs implementing');
-						}
-						else if (n == 2) {
-							buffer = [[]];
-							point.x = 1;
-							point.y = 1;
-						}
-						else {
-							console.error('Unhandled value for J: ' + value);
-						}
-					}
-				}
-				else {
-					console.error('Unhandled escape sequence: ' + match[0]);
-				}
-
-				string = string.slice(match[0].length);
-			};
-
-			var print_buffer = function () {
-				var m = buffer.length;
-				for	(var i = 0; i < m; i++) {
-					var row = buffer[i];
-					var n = row.length;
-					for (var j = 0; j < n; j++) {
-						var character = row[j];
-						if (character == undefined) {
-							character = '<span>&nbsp;</span>';
-						}
-						frame.append(character);
-					}
-					frame.append('<br/>');
-				}
-			};
-
-			string = string.replace(/\x0f/g, '');
-
-			while (string != '') {
-				var index = string.search(regexp);
-
-				if (index == -1 || index > 0) {
-					output_characters(index);
-				}
-				else if (index == 0) {
-					handle_esc();
-				}			
-			}
-			
-			print_buffer();
-		}
+		render_frame: render_frame
 	};
 }
 
