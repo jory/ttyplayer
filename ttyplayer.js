@@ -3,6 +3,10 @@ function TTYPlayer () {
 	var binary = null;
 	var ttyrec = null;
 	var index = 0;
+	var buffer = [[]];
+	var point = {
+		x: 1, y: 1
+	};
 
 	return {
 		get_ttyrec: function() {
@@ -51,40 +55,39 @@ function TTYPlayer () {
 			}			
 		},
 
-		render_frame: function (data) {
-			var string = data;
+		render_frame: function (string) {
 
-			var point = { x : 1, y : 1 };
-			var regexp = new RegExp('\\x1b\\[([0-9;]*)([mHGJ])');
+			var regexp = new RegExp('\\x1b\\[([0-9;]*)([dmGHJX])');
 			var span = {
 				foreground: 'white-fg',
 				background: 'black-bg',
 				light: ''
 			};
 
-			var output = [];
+			var output_characters = function (index) {
+				var substring = '';
 
-			var print = function(index) {
-				output.push('<span class="' + span.light + span.foreground +
-							' ' + span.background + '">');
 				if (index == -1) {
-					point.x += string.length;
-					if (string.indexOf(' ') != -1) {
-						string = string.replace(/ /g, '&nbsp;');
-					}
-					output.push(string);
-					string = '';
-				}
+					substring = string;
+				} 
 				else {
-					var substring = string.slice(0, index);
-					if (substring.indexOf(' ') != -1) {
-						substring = substring.replace(/ /g, '&nbsp;');
-					}
-					output.push(substring);
-					point.x += index;
+					substring = string.slice(0, index);
 					string = string.slice(index);
 				}
-				output.push('</span>');
+	
+				var pre = '<span class="' + span.light + span.foreground + ' ' +
+					span.background + '">';
+				var post = '</span>';
+
+				for (var i in substring) {
+					var character = substring[i];
+					if (character == ' ') {
+						character = '&nbsp;';
+					}
+
+					buffer[point.y - 1][point.x - 1] = pre + character + post;
+					point.x++;
+				}
 			};
 
 			var handle_esc = function() {
@@ -139,69 +142,65 @@ function TTYPlayer () {
 					}
 				}
 				else if (c == 'H') {
+					// Moves the point
 					if (value == '') {
-						// point.x = 1;
-						// point.y = 1;
-					}
-					else {
-						var n = point.y;
-						var m = point.x;
-
-						var values = value.split(';');
-
-						if (values[0] != '') {
-							n = parseInt(values[0]);
-						}
-						if (values.length == 2) {
-							m = parseInt(values[1]);
-						}
-
-						if (n > point.y) {
-							var diff = n - point.y;
-
-							output.push('<br/>');
-							for (var i = 1; i < diff; i++) {
-								output.push('<div>&nbsp;</div>');
-							}
-
-							point.y = n;
-							point.x = 1;
-						}
-
-
-						var diff = m - point.x;
-
-						output.push('<span>');
-						for (var i = 0; i < diff; i++) {
-							output.push('&nbsp');
-						}
-						output.push('</span>');
-
-						point.x = m;
-					}
-				}
-				else if (c == 'G') {
-					var m = parseInt(value);
-
-					var diff = m - point.x;
-
-					output.push('<span>');
-					for (var i = 0; i < diff; i++) {
-						output.push('&nbsp');
-					}
-					output.push('</span>');
-
-					point.x = m;
-				}
-				else if (c == 'J') {
-					var n = parseInt(value);
-					if (n == 2) {
-						frame.empty();
 						point.x = 1;
 						point.y = 1;
 					}
 					else {
-						console.error('Unhandled value for J: ' + value);
+						var values = value.split(';');
+
+						if (values[0] != '') {
+							var n = parseInt(values[0]);
+							for (var i = 0; i + point.y < n; i++) {
+								if (buffer[point.y + i] == undefined) {
+									buffer[point.y + i] = [];
+								}
+							}
+							point.y = n;
+						}
+						else {
+							point.y = 1;
+						}
+
+						if (values.length == 2) {
+							point.x = parseInt(values[1]);
+						}
+						else {
+							point.x = 1;
+						}
+					}
+				}
+				else if (c == 'G') {
+					// Moves the point horizontally.
+					point.x = parseInt(value);
+				}
+				else if (c == 'J') {
+					// Clear the buffer
+					if (value == '') {
+						// Same as 0 case,
+						// clear from point to end of buffer.
+						console.error('[J needs implementing');
+					}
+					else {
+						var n = parseInt(value);
+						if (n == 0) {
+							// Same as empty case,
+							// clear from point to end of buffer.
+							console.error('[0J needs implementing');
+						}
+						else if (n == 1) {
+							// Clear from point to beginning of buffer.
+							console.error('[1J needs implementing');
+						}
+						else if (n == 2) {
+							buffer = [[]];
+							point.x = 1;
+							point.y = 1;
+						}
+						else {
+							console.error('Unhandled value for J: ' + value);
+						}
 					}
 				}
 				else {
@@ -211,32 +210,36 @@ function TTYPlayer () {
 				string = string.slice(match[0].length);
 			};
 
-			// Done with definitions!
+			var print_buffer = function () {
+				var m = buffer.length;
+				for	(var i = 0; i < m; i++) {
+					var row = buffer[i];
+					var n = row.length;
+					for (var j = 0; j < n; j++) {
+						var character = row[j];
+						if (character == undefined) {
+							character = '<span>&nbsp;</span>';
+						}
+						frame.append(character);
+					}
+					frame.append('<br/>');
+				}
+			};
 
-			frame.empty();
-
-			// Until we know what this character does, get rid of it outright.
 			string = string.replace(/\x0f/g, '');
-
-			console.log(string);
 
 			while (string != '') {
 				var index = string.search(regexp);
 
-				if (index == -1) {
-					print(index);
-				}
-				else if (index > 0) {
-					print(index);
-					// handle_esc();
+				if (index == -1 || index > 0) {
+					output_characters(index);
 				}
 				else if (index == 0) {
 					handle_esc();
 				}			
 			}
-
-			// Now append the whole chunk to the frame.
-			frame.append(output.join(''));
+			
+			print_buffer();
 		}
 	};
 }
