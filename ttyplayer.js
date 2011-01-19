@@ -1,13 +1,17 @@
 function TTYPlayer () {
-	var frame = $('#frame');
 	var binary = null;
 	var ttyrec = null;
 	var index = 0;
+
+	var frame = $('#frame');
 	var buffer = [[]];
 	var point = {
 		x: 1, y: 1
 	};
+	var output = '';
+
 	var render_frame = function (string) {
+		output = string;
 
 		var regexp = new RegExp('\\x1b\\[([0-9;]*)([A-Za-z])');
 		var span = {
@@ -70,8 +74,23 @@ function TTYPlayer () {
 						else if (val == '30') {
 							span.foreground = 'black-fg';
 						}
+						else if (val == '31') {
+							span.foreground = 'red-fg';
+						}
+						else if (val == '32') {
+							span.foreground = 'green-fg';
+						}
 						else if (val == '33') {
 							span.foreground = 'yellow-fg';
+						}
+						else if (val == '34') {
+							span.foreground = 'blue-fg';
+						}
+						else if (val == '35') {
+							span.foreground = 'magenta-fg';
+						}
+						else if (val == '36') {
+							span.foreground = 'cyan-fg';
 						}
 						else if (val == '37') {
 							span.foreground = 'white-fg';
@@ -82,8 +101,26 @@ function TTYPlayer () {
 						else if (val == '40') {
 							span.background = 'black-bg';
 						}
+						else if (val == '41') {
+							span.background = 'red-bg';
+						}
 						else if (val == '42') {
 							span.background = 'green-bg';
+						}
+						else if (val == '43') {
+							span.background = 'yellow-bg';
+						}
+						else if (val == '44') {
+							span.background = 'blue-bg';
+						}
+						else if (val == '45') {
+							span.background = 'magenta-bg';
+						}
+						else if (val == '46') {
+							span.background = 'cyan-bg';
+						}
+						else if (val == '47') {
+							span.background = 'white-bg';
 						}
 						else if (val == '49') {
 							span.background = 'black-bg';
@@ -156,6 +193,18 @@ function TTYPlayer () {
 					}
 				}
 			}
+			else if (c == 'd') {
+				// Move the point downwards?
+				var n = parseInt(value);
+				for (var i = 0; i + point.y < n; i++) {
+					if (buffer[point.y + i] == undefined) {
+						buffer[point.y + i] = [];
+					}
+				}
+				point.y = n;
+
+				point.x = 1;
+			}
 			else {
 				console.error('Unhandled escape sequence: ' + match[0]);
 			}
@@ -198,6 +247,10 @@ function TTYPlayer () {
 	};
 
 	return {
+		get_output: function() {
+			return output;
+		},
+
 		get_ttyrec: function() {
 			return ttyrec;
 		},
