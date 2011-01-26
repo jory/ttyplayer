@@ -253,6 +253,10 @@ function TTYPlayer () {
 	};
 
 	return {
+		get_index: function() {
+			return index;
+		},
+
 		get_output: function() {
 			return output;
 		},
@@ -266,21 +270,23 @@ function TTYPlayer () {
 			point = { x:1, y: 1};
 			render_frame('');
 		},
+		
+		print_frame: function(i) {
+			var t = ttyrec[i];
+			var s = binary.getStringAt(t.address, t.len);
+			p.render_frame(s);
+		},
 
 		next_frame: function() {
 			if (index < ttyrec.length) {
-				var t = ttyrec[index];
-				var s = binary.getStringAt(t.address, t.len);
-				p.render_frame(s);
+				print_frame(index);
 				index += 1;
 			}
 		},
 
 		previous_frame: function() {
 			if (index > 0) {
-				var t = ttyrec[index];
-				var s = binary.getStringAt(t.address, t.len);
-				p.render_frame(s);
+				print_frame(index);
 				index -= 1;
 			}
 		},
