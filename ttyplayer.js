@@ -252,6 +252,12 @@ function TTYPlayer () {
 		print_buffer();
 	};
 
+	var print_frame = function(i) {
+		var t = ttyrec[i];
+		var s = binary.getStringAt(t.address, t.len);
+		p.render_frame(s);
+	};
+
 	return {
 		get_index: function() {
 			return index;
@@ -271,11 +277,7 @@ function TTYPlayer () {
 			render_frame('');
 		},
 		
-		print_frame: function(i) {
-			var t = ttyrec[i];
-			var s = binary.getStringAt(t.address, t.len);
-			p.render_frame(s);
-		},
+		print_frame: print_frame,
 
 		next_frame: function() {
 			if (index < ttyrec.length) {
