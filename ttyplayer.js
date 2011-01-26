@@ -5,18 +5,21 @@ function TTYPlayer () {
 
 	var frame = $('#frame');
 	var buffer = [[]];
+	var output = '';
 	var point = {
 		x: 1, y: 1
 	};
-	var output = '';
+	var last_move = {
+		x: 1, y: 1
+	};
 
 	var render_frame = function (string) {
 		output = string;
 
-		var regexp = new RegExp('\\x1b\\[([0-9;]*)([A-Za-z])');
+		var regexp = new RegExp('\\x1b\\[[?]?([0-9;]*)([A-Za-z])');
 		var span = {
-			foreground: 'white-fg',
-			background: 'black-bg',
+			foreground: 'white',
+			background: 'black',
 			light: ''
 		};
 
@@ -32,8 +35,8 @@ function TTYPlayer () {
 				string = string.slice(index);
 			}
 			
-			var pre = '<span class="' + span.light + span.foreground + ' ' +
-				span.background + '">';
+			var pre = '<span class="' + span.light + span.foreground + '-fg ' +
+				span.background + '-bg">';
 			var post = '</span>';
 
 			for (var i in substring) {
@@ -54,8 +57,8 @@ function TTYPlayer () {
 
 			if (c == 'm') {
 				if (value == '') {
-					span.foreground = 'white-fg';
-					span.background = 'black-bg';
+					span.foreground = 'white';
+					span.background = 'black';
 					span.light = '';
 				}
 				else {
@@ -64,66 +67,66 @@ function TTYPlayer () {
 					for (var i = 0; i < l; i++) {
 						var val = values[i];
 						if (val == '0') {
-							span.foreground = 'white-fg';
-							span.background = 'black-bg';
+							span.foreground = 'white';
+							span.background = 'black';
 							span.light = '';
 						}
 						else if (val == '1') {
 							span.light = 'light-';
 						}
 						else if (val == '30') {
-							span.foreground = 'black-fg';
+							span.foreground = 'black';
 						}
 						else if (val == '31') {
-							span.foreground = 'red-fg';
+							span.foreground = 'red';
 						}
 						else if (val == '32') {
-							span.foreground = 'green-fg';
+							span.foreground = 'green';
 						}
 						else if (val == '33') {
-							span.foreground = 'yellow-fg';
+							span.foreground = 'yellow';
 						}
 						else if (val == '34') {
-							span.foreground = 'blue-fg';
+							span.foreground = 'blue';
 						}
 						else if (val == '35') {
-							span.foreground = 'magenta-fg';
+							span.foreground = 'magenta';
 						}
 						else if (val == '36') {
-							span.foreground = 'cyan-fg';
+							span.foreground = 'cyan';
 						}
 						else if (val == '37') {
-							span.foreground = 'white-fg';
+							span.foreground = 'white';
 						}
 						else if (val == '39') {
-							span.foreground = 'white-fg';
+							span.foreground = 'white';
 						}
 						else if (val == '40') {
-							span.background = 'black-bg';
+							span.background = 'black';
 						}
 						else if (val == '41') {
-							span.background = 'red-bg';
+							span.background = 'red';
 						}
 						else if (val == '42') {
-							span.background = 'green-bg';
+							span.background = 'green';
 						}
 						else if (val == '43') {
-							span.background = 'yellow-bg';
+							span.background = 'yellow';
 						}
 						else if (val == '44') {
-							span.background = 'blue-bg';
+							span.background = 'blue';
 						}
 						else if (val == '45') {
-							span.background = 'magenta-bg';
+							span.background = 'magenta';
 						}
 						else if (val == '46') {
-							span.background = 'cyan-bg';
+							span.background = 'cyan';
 						}
 						else if (val == '47') {
-							span.background = 'white-bg';
+							span.background = 'white';
 						}
 						else if (val == '49') {
-							span.background = 'black-bg';
+							span.background = 'black';
 						}
 						else {
 							console.error('Unhandled SGR parameter: ' + val);
@@ -160,6 +163,9 @@ function TTYPlayer () {
 						point.x = 1;
 					}
 				}
+
+				last_move.y = point.y;					
+				last_move.x = point.x;
 			}
 			else if (c == 'G') {
 				// Moves the point horizontally.
@@ -203,7 +209,7 @@ function TTYPlayer () {
 				}
 				point.y = n;
 
-				point.x = 1;
+				point.x = last_move.x;
 			}
 			else {
 				console.error('Unhandled escape sequence: ' + match[0]);
