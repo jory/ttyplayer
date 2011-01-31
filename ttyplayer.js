@@ -1,22 +1,24 @@
 function TTYPlayer () {
 	var binary = null;
 	var ttyrec = null;
-	var index = 0;
+	var index = -1;
 
 	var frame = $('#frame');
 	var buffer = [[]];
 	var output = '';
+	var pre_pend = '';
 	var point = {
-		x: 1, y: 1
-	};
-	var last_move = {
 		x: 1, y: 1
 	};
 
 	var render_frame = function (string) {
+		string = pre_pend + string;
+		pre_pend = '';
+
 		output = string;
 
 		var regexp = new RegExp('\\x1b\\[[?]?([0-9;]*)([A-Za-z])');
+		var part_regexp = new RegExp('\\x1b\\[[?]?([0-9;]*)');
 		var span = {
 			foreground: 'white',
 			background: 'black',
@@ -51,11 +53,131 @@ function TTYPlayer () {
 		};
 
 		var handle_esc = function() {
-			var match = string.match(regexp);
-			var value = match[1];
-			var c = match[2];
 
-			if (c == 'm') {
+			var init_rows = function(n) {
+				for (var i = 0; i < n; i++) {
+					if (buffer[point.y + i] == undefined) {
+						buffer[point.y + i] = [];
+					}
+				}
+			};
+
+			var cursor_up = function(n) {
+				if (point.y == 1) return;
+				if (isNaN(n)) n = 1;
+
+				point.y -= n;
+
+				if (point.y < 1) point.y = 1;
+			};
+
+			var cursor_down = function(n) {
+				if (isNaN(n)) n = 1;
+
+				init_rows(n);
+				point.y += n;
+			};
+
+			var cursor_forward = function(n) {
+				if (isNaN(n)) n = 1;
+
+				point.x += n;
+			};
+
+			var cursor_back = function(n) {
+				if (point.x == 1) return;
+				if (isNaN(n)) n = 1;
+
+				point.x -= n;
+
+				if (point.x < 1) point.x = 1;
+			};
+
+			var cursor_next_line = function(n) {
+				cursor_down(n);
+				point.x = 1;
+			};
+
+			var cursor_prev_line = function(n) {
+				cursor_up(n);
+				point.x = 1;
+			};
+
+			var cursor_horizontal_absolute = function(n) {
+				if (isNaN(n)) {
+					console.error('Undefined behaviour for cursor_horizontal_absolute');
+					return;
+				}
+
+				point.x = n;
+			};
+
+			var cursor_position = function(row, column) {
+				if (row < point.y) {
+					cursor_up(point.y - row);
+				}
+				else if (row > point.y) {
+					cursor_down(row - point.y);
+				}
+
+				point.x = column;
+			};
+
+			var erase_data = function(n) {
+				if (isNaN(n)) n = 0;
+				if (n == 0) {
+					// Clear from the cursor to the end of the buffer.
+					buffer[point.y - 1].splice(point.x);
+					buffer.splice(point.y);
+				}
+				else if (n == 1) {
+					// Clear from the cursor to beginning of buffer.
+					for (var i = 0; i < point.y - 1; i++) {
+						buffer[i] = [];
+					}
+
+					for (var j = 0; j < point.x; j++) {
+						buffer[point.y - 1][j] = undefined;
+					}
+				}
+				else if (n == 2) {
+					buffer = [[]];
+					
+					// Moving the cursor might not be the right behaviour.
+					point.x = 1;
+					point.y = 1;
+				}
+				else {
+					console.error('Undefined behaviour for erase_data.');
+				}
+			};
+
+			var erase_in_line = function(n) {
+				if (isNaN(n)) n = 0;
+				if (n == 0) {
+					buffer[point.y - 1].splice(point.x);
+				}
+				else if (n == 1) {
+					for (var i = 0; i < point.x; i++) {
+						buffer[point.y - 1][i] = undefined;
+					}
+				}
+				else if (n == 2) {
+					buffer[point.y - 1] = [];
+				}
+				else {
+					console.error('Undefined behaviour for erase_in_line.');
+				}
+			};
+
+			var delete_characters = function(n) {
+				for (var i = 0; i < n; i++) {
+					buffer[point.y - 1][point.x + i] = undefined;
+				}
+				cursor_forward(n);
+			};
+
+			var select_graphic_rendition = function(value) {
 				if (value == '') {
 					span.foreground = 'white';
 					span.background = 'black';
@@ -73,6 +195,14 @@ function TTYPlayer () {
 						}
 						else if (val == '1') {
 							span.light = 'light-';
+						}
+						else if (val == '5') {
+							// Blink.
+						}
+						else if (val == '7') {
+							var temp = span.foreground;
+							span.foreground = span.background;
+							span.background = temp;
 						}
 						else if (val == '30') {
 							span.foreground = 'black';
@@ -132,84 +262,83 @@ function TTYPlayer () {
 							console.error('Unhandled SGR parameter: ' + val);
 						}
 					}
-				}
+				}				
+			};
+
+			var match = string.match(regexp);
+			var c = match[2];
+			var value = match[1];
+			var n = parseInt(value);
+
+			if (c == 'A') {
+				cursor_up(n);
 			}
-			else if (c == 'H') {
-				// Moves the point
-				if (value == '') {
-					point.x = 1;
-					point.y = 1;
-				}
-				else {
-					var values = value.split(';');
-
-					if (values[0] != '') {
-						var n = parseInt(values[0]);
-						for (var i = 0; i + point.y < n; i++) {
-							if (buffer[point.y + i] == undefined) {
-								buffer[point.y + i] = [];
-							}
-						}
-						point.y = n;
-					}
-					else {
-						point.y = 1;
-					}
-
-					if (values.length == 2) {
-						point.x = parseInt(values[1]);
-					}
-					else {
-						point.x = 1;
-					}
-				}
-
-				last_move.y = point.y;					
-				last_move.x = point.x;
+			else if (c == 'B') {
+				cursor_down(n);
+			}
+			else if (c == 'C') {
+				cursor_forward(n);
+			}
+			else if (c == 'D') {
+				cursor_back(n);
+			}
+			else if (c == 'E') {
+				cursor_next_line(n);
+			}
+			else if (c == 'F') {
+				cursor_prev_line(n);
 			}
 			else if (c == 'G') {
-				// Moves the point horizontally.
-				point.x = parseInt(value);
+				cursor_horizontal_absolute(n);
+			}
+			else if (c == 'H') {
+				var x = 1;
+				var y = 1;
+				if (value != '') {
+					var values = value.split(';');
+					if (values[0] != '') y = parseInt(values[0]);
+					if (values.length == 2) x = parseInt(values[1]);
+				}
+				cursor_position(y, x);
 			}
 			else if (c == 'J') {
-				// Clear the buffer
-				if (value == '') {
-					// Same as 0 case,
-					// clear from point to end of buffer.
-					console.error('[J needs implementing');
+				erase_data(n);
+			}
+			else if (c == 'K') {
+				erase_in_line(n);
+			}
+			else if (c == 'S') {
+				console.error('scroll_up not defined.');
+			}
+			else if (c == 'T') {
+				console.error('scroll_down not defined.');
+			}
+			else if (c == 'X') {
+				// Delete n characters to the right of the point?
+				delete_characters(n);
+			}
+			else if (c == 'f') {
+				var x = 1;
+				var y = 1;
+				if (value != '') {
+					var values = value.split(';');
+					if (values[0] != '') y = parseInt(values[0]);
+					if (values.length == 2) x = parseInt(values[1]);
 				}
-				else {
-					var n = parseInt(value);
-					if (n == 0) {
-						// Same as empty case,
-						// clear from point to end of buffer.
-						console.error('[0J needs implementing');
-					}
-					else if (n == 1) {
-						// Clear from point to beginning of buffer.
-						console.error('[1J needs implementing');
-					}
-					else if (n == 2) {
-						buffer = [[]];
-						point.x = 1;
-						point.y = 1;
-					}
-					else {
-						console.error('Unhandled value for J: ' + value);
-					}
-				}
+				cursor_position(y, x);
+			}
+			else if (c == 'm') {
+				select_graphic_rendition(value);
 			}
 			else if (c == 'd') {
 				// Move the point downwards?
-				var n = parseInt(value);
-				for (var i = 0; i + point.y < n; i++) {
-					if (buffer[point.y + i] == undefined) {
-						buffer[point.y + i] = [];
-					}
-				}
-				point.y = n;
-
-				point.x = last_move.x;
+				cursor_position(n, 1);
+			}
+			else if (match[0] == '?25l') {
+				console.error('hide_cursor not defined.');
+			}
+			else if (match[0] == '?25h') {
+				console.error('show_cursor not defined.');
 			}
 			else {
 				console.error('Unhandled escape sequence: ' + match[0]);
@@ -241,7 +370,17 @@ function TTYPlayer () {
 		while (string != '') {
 			var index = string.search(regexp);
 
-			if (index == -1 || index > 0) {
+			if (index == -1) {
+				// Have to see if the last few characters are a code that's been cut-off.
+				if (string.search(part_regexp) != -1) {
+					pre_pend = string;
+					string = '';
+				}
+				else {
+					output_characters(index);
+				}
+			}
+			else if ( index > 0) {
 				output_characters(index);
 			}
 			else if (index == 0) {
@@ -267,6 +406,10 @@ function TTYPlayer () {
 			return output;
 		},
 
+		get_prepend: function() {
+			return pre_pend;
+		},
+
 		get_ttyrec: function() {
 			return ttyrec;
 		},
@@ -281,16 +424,21 @@ function TTYPlayer () {
 
 		next_frame: function() {
 			if (index < ttyrec.length) {
-				print_frame(index);
 				index += 1;
+				print_frame(index);
 			}
 		},
 
 		previous_frame: function() {
 			if (index > 0) {
-				print_frame(index);
 				index -= 1;
+				print_frame(index);
 			}
+		},
+
+		set_frame: function(n) {
+			index = n;
+			print_frame(index);
 		},
 
 		parse_data: function (input) {
@@ -319,14 +467,20 @@ function TTYPlayer () {
 
 		render_frame: render_frame
 	};
-}
-
-var t = "\x1b[39;49m\x1b[37m\x1b[40m\x1b[H\x1b[2J\x1b[33m\x1b[40mWelcome, Shy.\x1b[0;1m\x0f\x1b[33m\x1b[40m Please select your species.\x1b[3;4H\x1b[0m\x0f\x1b[37m\x1b[40ma - Human\x1b[3;29Hi - Halfling\x1b[3;54Hq - Kenku\x1b[4;4Hb - High Elf\x1b[4;29Hj - Kobold\x1b[4;54Hr - Draconian\x1b[5;4Hc - Deep Elf\x1b[5;29Hk - Spriggan\x1b[5;54Hs - Demigod\x1b[6;4Hd - Sludge Elf\x1b[6;29Hl - Naga\x1b[6;54Ht - Demonspawn\x1b[7;4He - Mountain Dwarf\x1b[29Gm - Centaur\x1b[7;54Hu - Mummy\x1b[8;4H\x1b[37m\x1b[42mf - Deep Dwarf          \x1b[m\x0f\x1b[39;49m\x1b[37m\x1b[40m \x1b[37m\x1b[40mn - Ogre\x1b[8;54Hv - Ghoul\x1b[9;4Hg - Hill Orc\x1b[9;29Ho - Troll\x1b[9;54Hw - Vampire\x1b[10;4Hh - Merfolk\x1b[10;29Hp - Minotaur\x1b[17;4H\x1b[0;1m\x0f\x1b[37m\x1b[40mThey live deep down and cannot regenerate, but they are resilient and have\x1b[0m\x0f\x1b[30m\x1b[40m  \x1b[18;4H\x1b[0;1m\x0f\x1b[37m\x1b[40mtools to heal.\x1b[20;4H\x1b[0m\x0f\x1b[33m\x1b[40m+ - Viable Species\x1b[29G* - Random species\x1b[21;4H# - Viable character\x1b[m\x0f\x1b[39;49m\x1b[37m\x1b[40m     \x1b[33m\x1b[40m! - Random character\x1b[22;4H% - List aptitudes\x1b[m\x0f\x1b[39;49m\x1b[37m\x1b[40m   \x1b[33m\x1b[40mSpace - Pick background first\x1b[23;4H? - Help\x1b[23;27HTab - Deep Dwarf Chaos Knight\x1b[8;28H\x1b[m\x0f\x1b[39;49m\x1b[37m\x1b[40m";
+};
 
 var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  p.render_frame(t);
-			  BinaryAjax('foo.ttyrec', function (data) { p.parse_data(data); });
+			  BinaryAjax('foo.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
 		  });
+
+$('html').keydown(function(event) {
+				if (event.keyCode == '37') {
+					p.previous_frame();
+				}
+				else if (event.keyCode == '39') {
+					p.next_frame();
+				}
+			});
