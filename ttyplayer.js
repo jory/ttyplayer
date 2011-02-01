@@ -205,7 +205,6 @@ function TTYPlayer () {
 				for (var i = 0; i < n; i++) {
 					buffer[point.y - 1][point.x + i] = undefined;
 				}
-				cursor_forward(n);
 			};
 
 			var select_graphic_rendition = function(value) {
@@ -344,7 +343,6 @@ function TTYPlayer () {
 				console.error('scroll_down not defined.');
 			}
 			else if (c == 'X') {
-				// Delete n characters to the right of the point?
 				delete_characters(n);
 			}
 			else if (c == 'f') {
@@ -517,7 +515,7 @@ var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  BinaryAjax('Spec.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
+			  BinaryAjax('foo.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
 		  });
 
 $('html').keydown(function(event) {
