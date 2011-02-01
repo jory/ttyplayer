@@ -363,6 +363,10 @@ function TTYPlayer () {
 				}
 				frame.append('<br/>');
 			}
+
+			for (var j = 0; j + m < 24; j++) {
+				frame.append('<span>&nbsp;</span><br/>');
+			}
 		};
 
 		string = string.replace(/\x0f/g, '');
