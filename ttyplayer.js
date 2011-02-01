@@ -22,7 +22,8 @@ function TTYPlayer () {
 		var span = {
 			foreground: 'white',
 			background: 'black',
-			light: ''
+			light: '',
+			negative: false
 		};
 
 		var output_characters = function (index) {
@@ -37,8 +38,17 @@ function TTYPlayer () {
 				string = string.slice(index);
 			}
 			
-			var pre = '<span class="' + span.light + span.foreground + '-fg ' +
-				span.background + '-bg">';
+			var pre = '<span class="';
+			if (span.negative == false) {
+				pre += span.light + span.foreground + '-fg ' +
+					span.background + '-bg"';
+			}
+			else {
+				pre += span.light + span.foreground + '-bg ' +
+					span.background + '-fg"';
+			}
+			pre += '>';
+
 			var post = '</span>';
 
 			for (var i in substring) {
@@ -54,6 +64,9 @@ function TTYPlayer () {
 						// Carriage return
 						point.x = 1;
 						point.y++;
+						if (buffer[point.y - 1] == undefined) {
+							buffer[point.y - 1] = [];
+						}
 					}
 					else {
 						console.error('Unhandled non-printing character, code: ' + code);
@@ -210,6 +223,7 @@ function TTYPlayer () {
 							span.foreground = 'white';
 							span.background = 'black';
 							span.light = '';
+							span.negative = false;
 						}
 						else if (val == '1') {
 							span.light = 'light-';
@@ -218,9 +232,7 @@ function TTYPlayer () {
 							// Blink.
 						}
 						else if (val == '7') {
-							var temp = span.foreground;
-							span.foreground = span.background;
-							span.background = temp;
+							span.negative = true;
 						}
 						else if (val == '30') {
 							span.foreground = 'black';
