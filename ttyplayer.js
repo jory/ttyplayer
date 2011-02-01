@@ -54,7 +54,6 @@ function TTYPlayer () {
 						// Carriage return
 						point.x = 1;
 						point.y++;
-						init_rows(1);
 					}
 					else {
 						console.error('Unhandled non-printing character, code: ' + code);
