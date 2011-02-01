@@ -17,8 +17,8 @@ function TTYPlayer () {
 
 		output = string;
 
-		var regexp = new RegExp('\\x1b\\[[?]?([0-9;]*)([A-Za-z])');
-		var part_regexp = new RegExp('\\x1b\\[[?]?([0-9;]*)');
+		var regexp = new RegExp('\\x1b[[][?]?([0-9;]*)([A-Za-z])');
+		var part_regexp = new RegExp('\\x1b[[][?]?([0-9;]*)');
 		var span = {
 			foreground: 'white',
 			background: 'black',
@@ -127,8 +127,8 @@ function TTYPlayer () {
 				if (isNaN(n)) n = 0;
 				if (n == 0) {
 					// Clear from the cursor to the end of the buffer.
-					buffer[point.y - 1].splice(point.x);
-					buffer.splice(point.y);
+					buffer[point.y - 1].splice(point.x - 1);
+					buffer.splice(point.y - 1);
 				}
 				else if (n == 1) {
 					// Clear from the cursor to beginning of buffer.
@@ -155,7 +155,7 @@ function TTYPlayer () {
 			var erase_in_line = function(n) {
 				if (isNaN(n)) n = 0;
 				if (n == 0) {
-					buffer[point.y - 1].splice(point.x);
+					buffer[point.y - 1].splice(point.x - 1);
 				}
 				else if (n == 1) {
 					for (var i = 0; i < point.x; i++) {
@@ -334,10 +334,10 @@ function TTYPlayer () {
 				// Move the point downwards?
 				cursor_position(n, 1);
 			}
-			else if (match[0] == '?25l') {
+			else if (match[0] == '[?25l') {
 				console.error('hide_cursor not defined.');
 			}
-			else if (match[0] == '?25h') {
+			else if (match[0] == '[?25h') {
 				console.error('show_cursor not defined.');
 			}
 			else {
@@ -370,6 +370,7 @@ function TTYPlayer () {
 		};
 
 		string = string.replace(/\x0f/g, '');
+		string = string.replace(/\r/g, '');
 
 		while (string != '') {
 			var index = string.search(regexp);
@@ -402,12 +403,20 @@ function TTYPlayer () {
 	};
 
 	return {
+		get_buffer: function() {
+			return buffer;
+		},
+
 		get_index: function() {
 			return index;
 		},
 
 		get_output: function() {
 			return output;
+		},
+
+		get_point: function() {
+			return point;
 		},
 
 		get_prepend: function() {
@@ -477,7 +486,7 @@ var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  BinaryAjax('foo.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
+			  BinaryAjax('Spec.ttyrec', function (data) { p.parse_data(data); p.set_frame(0); });
 		  });
 
 $('html').keydown(function(event) {
