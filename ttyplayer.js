@@ -43,12 +43,31 @@ function TTYPlayer () {
 
 			for (var i in substring) {
 				var character = substring[i];
-				if (character == ' ') {
-					character = '&nbsp;';
-				}
+				var code = character.charCodeAt(0);
 
-				buffer[point.y - 1][point.x - 1] = pre + character + post;
-				point.x++;
+				if (code < 32) {
+					if (code == 8) {
+						// Backspace
+						point.x--;
+					}
+					else if (code == 13) {
+						// Carriage return
+						point.x = 1;
+						point.y++;
+						init_rows(1);
+					}
+					else {
+						console.error('Unhandled non-printing character, code: ' + code);
+					}
+				}
+				else {
+					if (character == ' ') {
+						character = '&nbsp;';
+					}
+
+					buffer[point.y - 1][point.x - 1] = pre + character + post;
+					point.x++;					
+				}
 			}
 		};
 
@@ -332,7 +351,7 @@ function TTYPlayer () {
 			}
 			else if (c == 'd') {
 				// Move the point downwards?
-				cursor_position(n, 1);
+				cursor_position(n, point.x);
 			}
 			else if (match[0] == '[?25l') {
 				console.error('hide_cursor not defined.');
@@ -369,8 +388,9 @@ function TTYPlayer () {
 			}
 		};
 
+		// Remove shift-in and shift-out, as I have no idea what to do with them.
 		string = string.replace(/\x0f/g, '');
-		string = string.replace(/\r/g, '');
+		string = string.replace(/\x0e/g, '');
 
 		while (string != '') {
 			var index = string.search(regexp);
@@ -486,7 +506,7 @@ var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  BinaryAjax('Spec.ttyrec', function (data) { p.parse_data(data); p.set_frame(0); });
+			  BinaryAjax('Spec.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
 		  });
 
 $('html').keydown(function(event) {
