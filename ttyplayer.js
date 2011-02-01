@@ -11,6 +11,13 @@ function TTYPlayer () {
 		x: 1, y: 1
 	};
 
+	var span = {
+		foreground: 'white',
+		background: 'black',
+		light: '',
+		negative: false
+	};
+
 	var render_frame = function (string) {
 		string = pre_pend + string;
 		pre_pend = '';
@@ -19,12 +26,6 @@ function TTYPlayer () {
 
 		var regexp = new RegExp('\\x1b[[][?]?([0-9;]*)([A-Za-z])');
 		var part_regexp = new RegExp('\\x1b[[][?]?([0-9;]*)');
-		var span = {
-			foreground: 'white',
-			background: 'black',
-			light: '',
-			negative: false
-		};
 
 		var output_characters = function (index) {
 			var substring = '';
@@ -515,7 +516,7 @@ var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  BinaryAjax('foo.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
+			  BinaryAjax('Bebop.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
 		  });
 
 $('html').keydown(function(event) {
