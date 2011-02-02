@@ -202,10 +202,22 @@ function TTYPlayer () {
 				}
 			};
 
-			var delete_characters = function(n) {
+			var erase_characters = function(n) {
 				for (var i = 0; i < n; i++) {
 					buffer[point.y - 1][point.x + i] = undefined;
 				}
+			};
+
+			var delete_line = function(n) {
+				if (isNaN(n)) n = 1;
+				
+				buffer.splice(point.y - 1, n);
+			};
+
+			var delete_character = function(n) {
+				if (isNaN(n)) n = 1;
+
+				buffer[point.y - 1].splice(point.x - 1, n);
 			};
 
 			var select_graphic_rendition = function(value) {
@@ -337,6 +349,12 @@ function TTYPlayer () {
 			else if (c == 'K') {
 				erase_in_line(n);
 			}
+			else if (c == 'M') {
+				delete_line(n);
+			}
+			else if (c == 'P') {
+				delete_character(n);
+			}
 			else if (c == 'S') {
 				console.error('scroll_up not defined.');
 			}
@@ -344,7 +362,7 @@ function TTYPlayer () {
 				console.error('scroll_down not defined.');
 			}
 			else if (c == 'X') {
-				delete_characters(n);
+				erase_characters(n);
 			}
 			else if (c == 'f') {
 				var x = 1;
