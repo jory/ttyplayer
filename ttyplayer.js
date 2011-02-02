@@ -381,10 +381,10 @@ function TTYPlayer () {
 				// Move the point downwards?
 				cursor_position(n, point.x);
 			}
-			else if (match[0] == '[?25l') {
+			else if (c == 'l' && value == '?25') {
 				console.error('hide_cursor not defined.');
 			}
-			else if (match[0] == '[?25h') {
+			else if (c == 'h' && value == '?25') {
 				console.error('show_cursor not defined.');
 			}
 			else {
@@ -450,6 +450,31 @@ function TTYPlayer () {
 		p.render_frame(s);
 	};
 
+	var next_frame =  function() {
+		if (index < ttyrec.length) {
+			index += 1;
+			print_frame(index);
+		}
+	};
+
+	var play_data = function() {
+		next_frame();
+		var current = ttyrec[index];
+		var next = ttyrec[index + 1];
+		
+		var millisec;
+		if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
+		else if (next.sec > current.sec) {
+			millisec = ((next.sec - current.sec - 1) * 1000 + ((1000000 - current.usec) + next.usec)/1000);	
+		}
+		else {
+			console.error("Frame " + (index + 1) + "reports an earlier time than frame " + index);
+			millisec = 0;
+		}
+
+		window.setTimeout(play_data, millisec);
+	};
+
 	return {
 		get_buffer: function() {
 			return buffer;
@@ -483,12 +508,7 @@ function TTYPlayer () {
 		
 		print_frame: print_frame,
 
-		next_frame: function() {
-			if (index < ttyrec.length) {
-				index += 1;
-				print_frame(index);
-			}
-		},
+		next_frame: next_frame,
 
 		previous_frame: function() {
 			if (index > 0) {
@@ -526,6 +546,8 @@ function TTYPlayer () {
 			}			
 		},
 
+		play_data: play_data,
+
 		render_frame: render_frame
 	};
 };
@@ -534,7 +556,7 @@ var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  BinaryAjax('Bebop.ttyrec', function (data) { p.parse_data(data); p.set_frame(6); });
+			  BinaryAjax('Bebop.ttyrec', function (data) { p.parse_data(data); p.set_frame(5); });
 		  });
 
 $('html').keydown(function(event) {
