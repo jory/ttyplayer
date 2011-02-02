@@ -3,6 +3,8 @@ function TTYPlayer () {
 	var ttyrec = null;
 	var index = -1;
 
+	var timeout = null;
+
 	var frame = $('#frame');
 	var buffer = [[]];
 	var output = '';
@@ -16,6 +18,11 @@ function TTYPlayer () {
 		background: 'black',
 		light: '',
 		negative: false
+	};
+
+	var margins = {
+		top: 1,
+		bottom: 24
 	};
 
 	var render_frame = function (string) {
@@ -61,13 +68,22 @@ function TTYPlayer () {
 						// Backspace
 						point.x--;
 					}
+					else if (code == 10) {
+						// LF
+						buffer.splice(point.y, 0, []);
+						buffer.splice(margins.top - 1, 1);
+					}
 					else if (code == 13) {
-						// Carriage return
+						// CR
 						point.x = 1;
 						point.y++;
 						if (buffer[point.y - 1] == undefined) {
 							buffer[point.y - 1] = [];
 						}
+					}
+					else if (code == 27) {
+						// ESC
+						console.error('How do I handle an ESC?');
 					}
 					else {
 						console.error('Unhandled non-printing character, code: ' + code);
@@ -307,6 +323,19 @@ function TTYPlayer () {
 				}				
 			};
 
+			var set_margins = function(value) {
+				var top = 1;
+				var bottom = 24;
+				if (value != '') {
+					var values = value.split(';');
+					if (values[0] != '') top = parseInt(values[0]);
+					if (values.length == 2) bottom = parseInt(values[1]);
+				}
+				
+				margins.top = top;
+				margins.bottom = bottom;
+			};
+
 			var match = string.match(regexp);
 			var c = match[2];
 			var value = match[1];
@@ -349,6 +378,10 @@ function TTYPlayer () {
 			else if (c == 'K') {
 				erase_in_line(n);
 			}
+			else if (c == 'L') {
+				// insert_line...
+				console.error('insert_line not defined.');
+			}
 			else if (c == 'M') {
 				delete_line(n);
 			}
@@ -364,6 +397,10 @@ function TTYPlayer () {
 			else if (c == 'X') {
 				erase_characters(n);
 			}
+			else if (c == 'd') {
+				// Move the point downwards?
+				cursor_position(n, point.x);
+			}			
 			else if (c == 'f') {
 				var x = 1;
 				var y = 1;
@@ -374,18 +411,18 @@ function TTYPlayer () {
 				}
 				cursor_position(y, x);
 			}
-			else if (c == 'm') {
-				select_graphic_rendition(value);
+			else if (c == 'h' && value == '?25') {
+				console.error('show_cursor not defined.');
 			}
-			else if (c == 'd') {
-				// Move the point downwards?
-				cursor_position(n, point.x);
-			}
+
 			else if (c == 'l' && value == '?25') {
 				console.error('hide_cursor not defined.');
 			}
-			else if (c == 'h' && value == '?25') {
-				console.error('show_cursor not defined.');
+			else if (c == 'm') {
+				select_graphic_rendition(value);
+			}
+			else if (c == 'r') {
+				set_margins(value);
 			}
 			else {
 				console.error('Unhandled escape sequence: ' + match[0]);
@@ -416,32 +453,37 @@ function TTYPlayer () {
 			}
 		};
 
+		var d = (new Date()).valueOf();
+
 		// Remove shift-in and shift-out, as I have no idea what to do with them.
 		string = string.replace(/\x0f/g, '');
 		string = string.replace(/\x0e/g, '');
 
 		while (string != '') {
-			var index = string.search(regexp);
+			var i = string.search(regexp);
 
-			if (index == -1) {
+			if (i == -1) {
 				// Have to see if the last few characters are a code that's been cut-off.
 				if (string.search(part_regexp) != -1) {
 					pre_pend = string;
 					string = '';
 				}
 				else {
-					output_characters(index);
+					output_characters(i);
 				}
 			}
-			else if ( index > 0) {
-				output_characters(index);
+			else if ( i > 0) {
+				output_characters(i);
 			}
-			else if (index == 0) {
+			else if (i == 0) {
 				handle_esc();
 			}			
 		}
 		
 		print_buffer();
+
+		var dp = (new Date()).valueOf();
+		console.log("Frame " + index + " took " + (dp-d)/1000 + " seconds.");
 	};
 
 	var print_frame = function(i) {
@@ -472,7 +514,13 @@ function TTYPlayer () {
 			millisec = 0;
 		}
 
-		window.setTimeout(play_data, millisec);
+		if (index < 35) {
+			timeout = window.setTimeout(play_data, millisec);			
+		}
+	};
+
+	var stop_data = function() {
+		window.clearTimeout(timeout);
 	};
 
 	return {
@@ -548,6 +596,8 @@ function TTYPlayer () {
 
 		play_data: play_data,
 
+		stop_data: stop_data,
+
 		render_frame: render_frame
 	};
 };
@@ -560,10 +610,13 @@ $().ready(function() {
 		  });
 
 $('html').keydown(function(event) {
-				if (event.keyCode == '37') {
-					p.previous_frame();
-				}
-				else if (event.keyCode == '39') {
-					p.next_frame();
-				}
+					  if (event.keyCode == '37') {
+						  p.previous_frame();
+					  }
+					  else if (event.keyCode == '39') {
+						  p.next_frame();
+					  }
+					  else if  (event.keyCode == '32') {
+						  p.stop_data();
+					  }
 			});
