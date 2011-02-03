@@ -514,9 +514,7 @@ function TTYPlayer () {
 			millisec = 0;
 		}
 
-		if (index < 35) {
-			timeout = window.setTimeout(play_data, millisec);			
-		}
+		timeout = window.setTimeout(play_data, millisec);			
 	};
 
 	var stop_data = function() {
