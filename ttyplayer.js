@@ -10,7 +10,8 @@ function TTYPlayer () {
 	var output = '';
 	var pre_pend = '';
 	var point = {
-		x: 1, y: 1
+		x: 1, y: 1,
+		show: false
 	};
 
 	var span = {
@@ -31,7 +32,7 @@ function TTYPlayer () {
 
 		output = string;
 
-		var regexp = new RegExp('\\x1b[[][?]?([0-9;]*)([A-Za-z])');
+		var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
 		var part_regexp = new RegExp('\\x1b[[][?]?([0-9;]*)');
 
 		var output_characters = function (index) {
@@ -97,6 +98,10 @@ function TTYPlayer () {
 					buffer[point.y - 1][point.x - 1] = pre + character + post;
 					point.x++;					
 				}
+			}
+
+			if (point.show) {
+				buffer[point.y - 1][point.x - 1] = '<span>_</span>';
 			}
 		};
 
@@ -413,10 +418,12 @@ function TTYPlayer () {
 			}
 			else if (c == 'h' && value == '?25') {
 				console.error('show_cursor not defined.');
+				point.show = true;
 			}
 
 			else if (c == 'l' && value == '?25') {
 				console.error('hide_cursor not defined.');
+				point.show = false;
 			}
 			else if (c == 'm') {
 				select_graphic_rendition(value);
@@ -604,7 +611,7 @@ var p;
 
 $().ready(function() {
 			  p = TTYPlayer();
-			  BinaryAjax('Bebop.ttyrec', function (data) { p.parse_data(data); p.set_frame(5); });
+			  BinaryAjax('Spec.ttyrec', function (data) { p.parse_data(data); p.set_frame(5); p.play_data()});
 		  });
 
 $('html').keydown(function(event) {
