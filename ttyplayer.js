@@ -62,8 +62,15 @@ function TTYPlayer () {
 
             var post = '</span>';
 
+            var j = 0;
+
             for (var i in substring) {
-                var character = substring[i];
+                i = parseInt(i);
+
+                if (i + j + 1 > substring.length) {
+                    break;
+                }
+                var character = substring[i + j];
                 var code = character.charCodeAt(0);
 
                 if (code < 32) {
@@ -89,7 +96,22 @@ function TTYPlayer () {
                     }
                     else if (code == 27) {
                         // ESC
-                        console.error('How do I handle an ESC?');
+                        var next = substring[i + j + 1];
+                        if (next == '7') {
+                            console.error('save_cursor');
+                            j++;
+                        }
+                        else if (next == '8') {
+                            console.error('restore_cursor');
+                            j++;
+                        }
+                        else if (next == 'M') {
+                            console.error('ESC-M');
+                            j++;
+                        }
+                        else {
+                            console.error('Unhandled ESC, followed by: ' + next);
+                        }
                     }
                     else {
                         console.error('Unhandled non-printing character, code: ' + code);
@@ -499,7 +521,7 @@ function TTYPlayer () {
         }
 
         var dp = (new Date()).valueOf();
-        console.log("Frame " + index + " took " + (dp-d)/1000 + " seconds.");
+        console.log('Frame ' + index + ' took ' + (dp-d) + ' milliseconds.');
     };
 
     var print_frame = function(i) {
@@ -527,10 +549,13 @@ function TTYPlayer () {
                         ((1000000 - current.usec) + next.usec)/1000);
         }
         else {
-            console.error("Frame " + (index + 1) + 
-                          "reports an earlier time than frame " + index);
+            console.error('Frame ' + (index + 1) + 
+                          'reports an earlier time than frame ' + index);
             millisec = 0;
         }
+
+
+        console.log('Wait ' + millisec + ' milliseconds.');
 
         timeout = window.setTimeout(play_data, millisec);
     };
@@ -624,7 +649,7 @@ var p;
 $().ready(
     function() {
         p = TTYPlayer();
-        BinaryAjax('Spec.ttyrec', 
+        BinaryAjax('Bebop.ttyrec', 
                    function (data) { 
                        p.parse_data(data); 
                        p.set_frame(5); 
