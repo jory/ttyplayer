@@ -523,10 +523,12 @@ function TTYPlayer () {
         var millisec;
         if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
         else if (next.sec > current.sec) {
-            millisec = ((next.sec - current.sec - 1) * 1000 + ((1000000 - current.usec) + next.usec)/1000);
+            millisec = ((next.sec - current.sec - 1) * 1000 + 
+                        ((1000000 - current.usec) + next.usec)/1000);
         }
         else {
-            console.error("Frame " + (index + 1) + "reports an earlier time than frame " + index);
+            console.error("Frame " + (index + 1) + 
+                          "reports an earlier time than frame " + index);
             millisec = 0;
         }
 
@@ -597,12 +599,13 @@ function TTYPlayer () {
                 var len = binary.getLongAt(offset + 8, false);
                 var address = offset + 12;
 
-                ttyrec.push({ 
-                                sec: sec,
-                                usec: usec,
-                                len: len,
-                                address: address
-                            });
+                ttyrec.push(
+                    { 
+                        sec: sec,
+                        usec: usec,
+                        len: len,
+                        address: address
+                    });
 
                 offset += (12 + len);
             }
@@ -618,19 +621,26 @@ function TTYPlayer () {
 
 var p;
 
-$().ready(function() {
-              p = TTYPlayer();
-              BinaryAjax('Spec.ttyrec', function (data) { p.parse_data(data); p.set_frame(5); p.play_data()});
-          });
+$().ready(
+    function() {
+        p = TTYPlayer();
+        BinaryAjax('Spec.ttyrec', 
+                   function (data) { 
+                       p.parse_data(data); 
+                       p.set_frame(5); 
+                       p.play_data();
+                   });
+    });
 
-$('html').keydown(function(event) {
-                      if (event.keyCode == '37') {
-                          p.previous_frame();
-                      }
-                      else if (event.keyCode == '39') {
-                          p.next_frame();
-                      }
-                      else if  (event.keyCode == '32') {
-                          p.stop_data();
-                      }
-                  });
+$('html').keydown(
+    function(event) {
+        if (event.keyCode == '37') {
+            p.previous_frame();
+        }
+        else if (event.keyCode == '39') {
+            p.next_frame();
+        }
+        else if  (event.keyCode == '32') {
+            p.stop_data();
+        }
+    });
