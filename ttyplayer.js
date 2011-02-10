@@ -35,6 +35,8 @@ function TTYPlayer () {
         var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
         var part_regexp = new RegExp('\\x1b[[][?]?([0-9;]*)');
 
+        var should_print = false;
+
         var output_characters = function (index) {
             var substring = '';
 
@@ -67,6 +69,9 @@ function TTYPlayer () {
                 if (code < 32) {
                     if (code == 8) {
                         // Backspace
+                        if (point.show) {
+                            buffer[point.y - 1][point.x -1] = undefined;
+                        }
                         point.x--;
                     }
                     else if (code == 10) {
@@ -100,9 +105,7 @@ function TTYPlayer () {
                 }
             }
 
-            if (point.show) {
-                buffer[point.y - 1][point.x - 1] = '<span>_</span>';
-            }
+            should_print = true;
         };
 
         var handle_esc = function() {
@@ -417,13 +420,13 @@ function TTYPlayer () {
                 cursor_position(y, x);
             }
             else if (c == 'h' && value == '?25') {
-                console.error('show_cursor not defined.');
                 point.show = true;
             }
 
             else if (c == 'l' && value == '?25') {
-                console.error('hide_cursor not defined.');
                 point.show = false;
+                buffer[point.y - 1][point.x - 1] = undefined;
+                should_print = true;
             }
             else if (c == 'm') {
                 select_graphic_rendition(value);
@@ -487,7 +490,13 @@ function TTYPlayer () {
             }
         }
 
-        print_buffer();
+        if (should_print) {
+            if (point.show) {
+                buffer[point.y - 1][point.x - 1] = '<span>_</span>';
+            }
+
+            print_buffer();            
+        }
 
         var dp = (new Date()).valueOf();
         console.log("Frame " + index + " took " + (dp-d)/1000 + " seconds.");
