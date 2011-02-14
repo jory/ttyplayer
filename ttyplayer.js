@@ -26,6 +26,9 @@ function TTYPlayer () {
         bottom: 24
     };
 
+    var HEIGHT = 24;
+    var WIDTH = 80;
+
     var render_frame = function (string) {
         string = pre_pend + string;
         pre_pend = '';
@@ -36,6 +39,9 @@ function TTYPlayer () {
         var part_regexp = new RegExp('\\x1b[[][?]?([0-9;]*)');
 
         var should_print = false;
+
+        var update_lines = {};
+        var update_chars = {};
 
         var output_characters = function (index) {
             var substring = '';
@@ -78,6 +84,11 @@ function TTYPlayer () {
                         // Backspace
                         if (point.show) {
                             buffer[point.y - 1][point.x -1] = undefined;
+
+                            if (update_lines['-1'] == undefined && 
+                                update_lines[point.y] == undefined) {
+                                update_chars[point.y + '_' + point.x] = true;
+                            }
                         }
                         point.x--;
                     }
@@ -85,14 +96,23 @@ function TTYPlayer () {
                         // LF
                         buffer.splice(point.y, 0, []);
                         buffer.splice(margins.top - 1, 1);
+
+                        if (update_lines['-1'] == undefined) {
+                            for (var k = margins.top; k <= point.y; k++) {
+                                update_lines[k] = true;
+                            }
+                        }
                     }
                     else if (code == 13) {
                         // CR
                         point.x = 1;
                         point.y++;
+
                         if (buffer[point.y - 1] == undefined) {
                             buffer[point.y - 1] = [];
                         }
+
+                        update_lines[point.y] = true;
                     }
                     else if (code == 27) {
                         // ESC
@@ -123,6 +143,12 @@ function TTYPlayer () {
                     }
 
                     buffer[point.y - 1][point.x - 1] = pre + character + post;
+                    
+                    if (update_lines['-1'] == undefined && 
+                        update_lines[point.y] == undefined) {
+                        update_chars[point.y + '_' + point.x] = true;
+                    }
+
                     point.x++;
                 }
             }
@@ -206,7 +232,20 @@ function TTYPlayer () {
                 if (n == 0) {
                     // Clear from the cursor to the end of the buffer.
                     buffer[point.y - 1].splice(point.x - 1);
-                    buffer.splice(point.y - 1);
+                    buffer.splice(point.y);
+                    init_rows(HEIGHT - point.y);
+
+                    if (update_lines['-1'] == undefined) {                        
+                        if (update_lines[point.y] == undefined) {
+                            for (var i = point.x; i <= WIDTH; i++) {
+                                update_chars[point.y + '_' + i] = true;                            
+                            }
+                        }
+
+                        for (var j = point.y; j <= HEIGHT; j++) {
+                            update_lines[j] = true;
+                        }
+                    }
                 }
                 else if (n == 1) {
                     // Clear from the cursor to beginning of buffer.
@@ -217,6 +256,18 @@ function TTYPlayer () {
                     for (var j = 0; j < point.x; j++) {
                         buffer[point.y - 1][j] = undefined;
                     }
+
+                    if (update_lines['-1'] == undefined) {
+                        for (var i = 1; i < point.y; i++) {
+                            update_lines[i] = true;
+                        }
+
+                        if (update_lines[point.y] == undefined) {
+                            for (var j = 1; j <= point.x; j++) {
+                                update_chars[point.y + '_' + j] = true;
+                            }
+                        }
+                    }
                 }
                 else if (n == 2) {
                     buffer = [[]];
@@ -224,6 +275,10 @@ function TTYPlayer () {
                     // Moving the cursor might not be the right behaviour.
                     point.x = 1;
                     point.y = 1;
+
+                    init_rows(HEIGHT - point.y);
+
+                    update_lines['-1'] = true;
                 }
                 else {
                     console.error('Undefined behaviour for erase_data.');
@@ -234,14 +289,32 @@ function TTYPlayer () {
                 if (isNaN(n)) n = 0;
                 if (n == 0) {
                     buffer[point.y - 1].splice(point.x - 1);
+ 
+                   if (update_lines['-1'] == undefined &&
+                       update_lines[point.y] == undefined) {
+                       for (var i = point.x + 1; i < WIDTH; i++) {
+                           update_chars[point.y + '_' + i] = true;
+                       }
+                   }
                 }
                 else if (n == 1) {
                     for (var i = 0; i < point.x; i++) {
                         buffer[point.y - 1][i] = undefined;
                     }
+
+                   if (update_lines['-1'] == undefined &&
+                       update_lines[point.y] == undefined) {
+                       for (var j = 1; j < point.x; j++) {
+                           update_chars[point.y + '_' + j] = true;
+                       }
+                   }
                 }
                 else if (n == 2) {
                     buffer[point.y - 1] = [];
+
+                    if (update_lines['-1'] == undefined) {
+                        update_lines[point.y] = true;
+                    }
                 }
                 else {
                     console.error('Undefined behaviour for erase_in_line.');
@@ -252,18 +325,40 @@ function TTYPlayer () {
                 for (var i = 0; i < n; i++) {
                     buffer[point.y - 1][point.x + i] = undefined;
                 }
+
+                if (update_lines['-1'] == undefined &&
+                    update_lines[point.y] == undefined) {
+                    for (var i = 1; i <= n; i++) {
+                        update_chars[point.y + '_' + (point.x + 1)] = true;
+                    }
+                }
             };
 
             var delete_line = function(n) {
                 if (isNaN(n)) n = 1;
 
                 buffer.splice(point.y - 1, n);
+                init_rows(n);
+
+                if (update_lines['-1'] == undefined) {
+                    for (var i = 0; i < n; i++) {
+                        update_lines[(point.y + i)] = true;
+                    }
+                }
             };
 
             var delete_character = function(n) {
                 if (isNaN(n)) n = 1;
 
                 buffer[point.y - 1].splice(point.x - 1, n);
+
+                if (update_lines['-1'] == undefined &&
+                    update_lines[point.y] == undefined) {
+                    for (var i = 0; i < n; i++) {
+                        update_chars[point.y + '_' + (point.x + i)] = true;
+                    }
+                }
+
             };
 
             var select_graphic_rendition = function(value) {
@@ -464,24 +559,71 @@ function TTYPlayer () {
         };
 
         var print_buffer = function () {
-            frame.empty();
 
-            var m = buffer.length;
-            for(var i = 0; i < m; i++) {
-                var row = buffer[i];
-                var n = row.length;
-                for (var j = 0; j < n; j++) {
-                    var character = row[j];
-                    if (character == undefined) {
-                        character = '<span>&nbsp;</span>';
+            if (update_lines['-1']) {
+                
+                var m = buffer.length;
+                for (var i = 1; i <= m; i++) {
+                    for (var j = 1; j <= WIDTH; j++) { 
+
+                        var c = buffer[i - 1][j - 1];
+                        if (c == undefined) {
+                            c = '<span>&nbsp;</span>';
+                        }
+
+                        var f = $('#f' + i + '_' + j);
+                        f.empty();
+                        f.append(c);
                     }
-                    frame.append(character);
                 }
-                frame.append('<br/>');
-            }
 
-            for (var j = 0; j + m < 24; j++) {
-                frame.append('<span>&nbsp;</span><br/>');
+                for (var i = 1; i + m <= HEIGHT; i++) {
+                    for (var j = 1; j <= WIDTH; j++) { 
+                        var f = $('#f' + (i + m) + '_' + j);
+                        f.empty();
+                        f.append('<span>&nbsp;</span>');
+                    }
+                }
+            }
+            else {
+                for (var point in update_chars) {
+                    var points = point.split('_');
+                    var i = parseInt(points[0]);
+                    var j = parseInt(points[1]);
+
+                    // Skip any character that will be covered by a line printing.
+                    if (update_lines[i]) {
+                        continue;
+                    }
+
+                    var c = buffer[i - 1][j - 1];
+                    if (c == undefined) {
+                        c = '<span>&nbsp;</span>';
+                    }
+
+                    var f = $('#f' + i + '_' + j);
+                    f.empty();
+                    f.append(c);
+                }
+
+                for (var line in update_lines) {
+                    var i = parseInt(line);
+
+                    for (var j = 1; j <= WIDTH; j++) {
+                        if (index == 12) {
+                            var foo = true;
+                        }
+
+                        var c = buffer[i - 1][j - 1];
+                        if (c == undefined) {
+                            c = '<span>&nbsp;</span>';
+                        }
+
+                        var f = $('#f' + i + '_' + j);
+                        f.empty();
+                        f.append(c);
+                    }
+                }
             }
         };
 
