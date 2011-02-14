@@ -292,7 +292,7 @@ function TTYPlayer () {
  
                    if (update_lines['-1'] == undefined &&
                        update_lines[point.y] == undefined) {
-                       for (var i = point.x + 1; i < WIDTH; i++) {
+                       for (var i = point.x; i <= WIDTH; i++) {
                            update_chars[point.y + '_' + i] = true;
                        }
                    }
@@ -304,7 +304,7 @@ function TTYPlayer () {
 
                    if (update_lines['-1'] == undefined &&
                        update_lines[point.y] == undefined) {
-                       for (var j = 1; j < point.x; j++) {
+                       for (var j = 1; j <= point.x; j++) {
                            update_chars[point.y + '_' + j] = true;
                        }
                    }
@@ -328,8 +328,8 @@ function TTYPlayer () {
 
                 if (update_lines['-1'] == undefined &&
                     update_lines[point.y] == undefined) {
-                    for (var i = 1; i <= n; i++) {
-                        update_chars[point.y + '_' + (point.x + 1)] = true;
+                    for (var i = 0; i < n; i++) {
+                        update_chars[point.y + '_' + (point.x + i)] = true;
                     }
                 }
             };
@@ -703,7 +703,7 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        if (index < 14) {
+        if (index < 27) {
             timeout = window.setTimeout(play_data, millisec);
         }
     };
