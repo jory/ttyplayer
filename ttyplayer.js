@@ -126,7 +126,16 @@ function TTYPlayer () {
                             j++;
                         }
                         else if (next == 'M') {
-                            console.error('ESC-M');
+                            // Reverse LF
+                            buffer.splice(point.y - 1, 0, []);
+                            buffer.splice(margins.bottom, 1);
+
+                            if (update_lines['-1'] == undefined) {
+                                for (var k = point.y; k <= margins.bottom; k++) {
+                                    update_lines[k] = true;
+                                }
+                            }
+
                             j++;
                         }
                         else {
@@ -703,7 +712,7 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        if (index < 27) {
+        if (index < 70) {
             timeout = window.setTimeout(play_data, millisec);
         }
     };
