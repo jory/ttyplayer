@@ -242,7 +242,7 @@ function TTYPlayer () {
                             }
                         }
 
-                        for (var j = point.y; j <= HEIGHT; j++) {
+                        for (var j = point.y + 1; j <= HEIGHT; j++) {
                             update_lines[j] = true;
                         }
                     }
@@ -338,12 +338,16 @@ function TTYPlayer () {
                 if (isNaN(n)) n = 1;
 
                 buffer.splice(point.y - 1, n);
-                init_rows(n);
 
                 if (update_lines['-1'] == undefined) {
-                    for (var i = 0; i < n; i++) {
+                    for (var i = 0; point.y + i <= HEIGHT; i++) {
                         update_lines[(point.y + i)] = true;
                     }
+                }
+
+                var offset = HEIGHT - n;
+                for (var j = 0; offset + j < HEIGHT; j++) {
+                    buffer.push([]);
                 }
             };
 
@@ -699,7 +703,9 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        timeout = window.setTimeout(play_data, millisec);
+        if (index < 14) {
+            timeout = window.setTimeout(play_data, millisec);
+        }
     };
 
     var stop_data = function() {
@@ -794,7 +800,7 @@ $().ready(
         BinaryAjax('Bebop.ttyrec', 
                    function (data) { 
                        p.parse_data(data); 
-                       p.set_frame(5); 
+                       p.set_frame(5);
                        p.play_data();
                    });
     });
