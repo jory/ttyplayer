@@ -667,6 +667,11 @@ function TTYPlayer () {
         string = string.replace(/\x0f/g, '');
         string = string.replace(/\x0e/g, '');
 
+        if (point.show) {
+            buffer[point.y - 1][point.x - 1] = '<span>&nbsp;</span>';
+            update_chars[point.y + '_' + point.x] = true;
+        }
+
         while (string != '') {
             var i = string.search(regexp);
 
@@ -691,7 +696,7 @@ function TTYPlayer () {
         var dp = (new Date()).valueOf();
         console.log('Processing ' + index + ' took ' + (dp-d) + ' milliseconds.');
 
-        if (should_print) {
+        if (should_print || point.show) {
             if (point.show) {
                 buffer[point.y - 1][point.x - 1] = '<span>_</span>';
                 update_chars[point.y + '_' + point.x] = true;
@@ -741,9 +746,9 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        if (index < 321) {
+        // if (index < 321) {
             timeout = window.setTimeout(play_data, millisec);
-        }
+        // }
     };
 
     var stop_data = function() {
