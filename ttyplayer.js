@@ -600,16 +600,14 @@ function TTYPlayer () {
                         }
 
                         var f = $('#f' + i + '_' + j);
-                        f.empty();
-                        f.append(c);
+                        f.html(c);
                     }
                 }
 
                 for (var i = 1; i + m <= HEIGHT; i++) {
                     for (var j = 1; j <= WIDTH; j++) { 
                         var f = $('#f' + (i + m) + '_' + j);
-                        f.empty();
-                        f.append('<span>&nbsp;</span>');
+                        f.html('<span>&nbsp;</span>');
                     }
                 }
             }
@@ -630,8 +628,7 @@ function TTYPlayer () {
                     }
 
                     var f = $('#f' + i + '_' + j);
-                    f.empty();
-                    f.append(c);
+                    f.html(c);
                 }
 
                 for (var line in update_lines) {
@@ -648,8 +645,7 @@ function TTYPlayer () {
                         }
 
                         var f = $('#f' + i + '_' + j);
-                        f.empty();
-                        f.append(c);
+                        f.html(c);
                     }
                 }
             }
