@@ -379,6 +379,7 @@ function TTYPlayer () {
                     span.foreground = 'white';
                     span.background = 'black';
                     span.light = '';
+                    span.negative = false;
                 }
                 else {
                     var values = value.split(';');
@@ -536,7 +537,7 @@ function TTYPlayer () {
                 erase_characters(n);
             }
             else if (c == 'd') {
-                // Move the point downwards?
+                // Line position absolute
                 cursor_position(n, point.x);
             }
             else if (c == 'f') {
@@ -709,10 +710,14 @@ function TTYPlayer () {
             millisec = 0;
         }
 
+        ////////////////////////////////////
+        // NOTE: Remove the following line!
+        ////////////////////////////////////
+        millisec = 0;
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        if (index < 70) {
+        if (index < 108) {
             timeout = window.setTimeout(play_data, millisec);
         }
     };
