@@ -332,7 +332,7 @@ function TTYPlayer () {
 
             var erase_characters = function(n) {
                 for (var i = 0; i < n; i++) {
-                    buffer[point.y - 1][point.x + i] = undefined;
+                    buffer[point.y - 1][point.x - 1 + i] = undefined;
                 }
 
                 if (update_lines['-1'] == undefined &&
