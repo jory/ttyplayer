@@ -367,7 +367,7 @@ function TTYPlayer () {
 
                 if (update_lines['-1'] == undefined &&
                     update_lines[point.y] == undefined) {
-                    for (var i = 0; i < n; i++) {
+                    for (var i = 0; i < (WIDTH - n); i++) {
                         update_chars[point.y + '_' + (point.x + i)] = true;
                     }
                 }
@@ -731,7 +731,7 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        if (index < 175) {
+        if (index < 321) {
             timeout = window.setTimeout(play_data, millisec);
         }
     };
@@ -825,7 +825,7 @@ var p;
 $().ready(
     function() {
         p = TTYPlayer();
-        BinaryAjax('Bebop.ttyrec', 
+        BinaryAjax('foo.ttyrec', 
                    function (data) { 
                        p.parse_data(data); 
                        p.set_frame(5);
