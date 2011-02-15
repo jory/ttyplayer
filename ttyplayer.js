@@ -45,7 +45,7 @@ function TTYPlayer () {
         output = string;
 
         var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
-        var part_regexp = new RegExp('\\x1b[[][?]?([0-9;]*)');
+        var part_regexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
 
         var should_print = false;
 
@@ -152,7 +152,7 @@ function TTYPlayer () {
                             j++;
                         }
                         else {
-                            console.error('Unhandled ESC, followed by: ' + next);
+                            console.error('Unhandled ESC followed by: ' + next);
                         }
                     }
                     else {
@@ -746,7 +746,7 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        // if (index < 321) {
+        // if (index < 2524) {
             timeout = window.setTimeout(play_data, millisec);
         // }
     };
