@@ -688,16 +688,20 @@ function TTYPlayer () {
             }
         }
 
+        var dp = (new Date()).valueOf();
+        console.log('Processing ' + index + ' took ' + (dp-d) + ' milliseconds.');
+
         if (should_print) {
             if (point.show) {
                 buffer[point.y - 1][point.x - 1] = '<span>_</span>';
+                update_chars[point.y + '_' + point.x] = true;
             }
 
             print_buffer();            
         }
 
-        var dp = (new Date()).valueOf();
-        console.log('Frame ' + index + ' took ' + (dp-d) + ' milliseconds.');
+        var dpp = (new Date()).valueOf();
+        console.log('Printing ' + index + ' took ' + (dpp-dp) + ' milliseconds.');
     };
 
     var print_frame = function(i) {
@@ -737,9 +741,9 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        // if (index < 20) {
+        if (index < 321) {
             timeout = window.setTimeout(play_data, millisec);
-        // }
+        }
     };
 
     var stop_data = function() {
