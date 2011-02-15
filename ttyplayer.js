@@ -380,7 +380,7 @@ function TTYPlayer () {
 
                 if (update_lines['-1'] == undefined &&
                     update_lines[point.y] == undefined) {
-                    for (var i = 0; i < (WIDTH - n); i++) {
+                    for (var i = 0; i <= (WIDTH - point.x); i++) {
                         update_chars[point.y + '_' + (point.x + i)] = true;
                     }
                 }
