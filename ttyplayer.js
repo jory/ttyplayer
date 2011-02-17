@@ -11,9 +11,6 @@ function TTYPlayer () {
     var HEIGHT = 24;
     var WIDTH = 80;
 
-    // State variables
-    var buffer, cursor, rendition, margins, pre_pend;
-
     // The spans that correspond to the buffer's cells.
     var cells = {};
 
@@ -24,6 +21,8 @@ function TTYPlayer () {
         }
     }
 
+    // State variables
+    var buffer, cursor, rendition, margins, pre_pend, should_print, update_lines, update_chars;
 
     var render_frame = function (string) {
         string = pre_pend + string;
@@ -33,9 +32,6 @@ function TTYPlayer () {
         var part_regexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
 
         var should_print = false;
-
-        var update_lines = {};
-        var update_chars = {};
 
         var output_characters = function (index) {
             var substring = '';
@@ -560,68 +556,6 @@ function TTYPlayer () {
             string = string.slice(match[0].length);
         };
 
-        var print_buffer = function () {
-
-            if (update_lines['-1']) {
-                
-                var m = buffer.length;
-                for (var i = 1; i <= m; i++) {
-                    for (var j = 1; j <= WIDTH; j++) { 
-
-                        var c = buffer[i - 1][j - 1];
-                        if (c == undefined) {
-                            c = '<span>&nbsp;</span>';
-                        }
-
-                        var f = cells[i + '_' + j];
-                        f.html(c);
-                    }
-                }
-
-                for (var i = 1; i + m <= HEIGHT; i++) {
-                    for (var j = 1; j <= WIDTH; j++) { 
-                        var f = cells[(i + m) + '_' + j];
-                        f.html('<span>&nbsp;</span>');
-                    }
-                }
-            }
-            else {
-                for (var point in update_chars) {
-                    var points = point.split('_');
-                    var i = parseInt(points[0]);
-                    var j = parseInt(points[1]);
-
-                    // Skip any character that will be covered by a line printing.
-                    if (update_lines[i]) {
-                        continue;
-                    }
-
-                    var c = buffer[i - 1][j - 1];
-                    if (c == undefined) {
-                        c = '<span>&nbsp;</span>';
-                    }
-
-                    var f = cells[i + '_' + j];
-                    f.html(c);
-                }
-
-                for (var line in update_lines) {
-                    var i = parseInt(line);
-
-                    for (var j = 1; j <= WIDTH; j++) {
-
-                        var c = buffer[i - 1][j - 1];
-                        if (c == undefined) {
-                            c = '<span>&nbsp;</span>';
-                        }
-
-                        var f = cells[i + '_' + j];
-                        f.html(c);
-                    }
-                }
-            }
-        };
-
         var d = (new Date()).valueOf();
 
         // Remove shift-in and shift-out, as I have no idea what to do with them.
@@ -668,6 +602,61 @@ function TTYPlayer () {
 
         var dpp = (new Date()).valueOf();
         console.log('Printing ' + index + ' took ' + (dpp-dp) + ' milliseconds.');
+    };
+
+    
+
+    var print_buffer = function () {
+
+        var print_cell = function(i, j) {
+
+            var c = buffer[i - 1][j - 1];
+            if (c == undefined) {
+                c = '<span>&nbsp;</span>';
+            }
+
+            cells[i + '_' + j].html(c);
+        };
+
+        if (update_lines['-1']) {
+            update_chars = {};
+            update_lines = {};
+
+            var m = buffer.length;
+            for (var n = 1; n <= m; n++) {
+                update_lines[n] = true;
+            }
+
+            for (var i = 1; i + m <= HEIGHT; i++) {
+                for (var j = 1; j <= WIDTH; j++) { 
+                    cells[(i + m) + '_' + j].html('<span>&nbsp;</span>');
+                }
+            }
+        }
+
+        for (var point in update_chars) {
+            var points = point.split('_');
+            var i = parseInt(points[0]);
+            var j = parseInt(points[1]);
+
+            // Skip any character that will be covered by a line printing.
+            if (update_lines[i]) {
+                continue;
+            }
+
+            print_cell(i, j);
+        }
+
+        for (var line in update_lines) {
+            var i = parseInt(line);
+
+            for (var j = 1; j <= WIDTH; j++) {
+                print_cell(i, j);
+            }
+        }
+
+        update_chars = {};
+        update_lines = {};
     };
 
     var print_frame = function(i) {
@@ -723,6 +712,9 @@ function TTYPlayer () {
         reset_margins();
 
         pre_pend = '';
+
+        update_lines = {};
+        update_chars = {};
     };
 
     var reset_cursor = function() {
