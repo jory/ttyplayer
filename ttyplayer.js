@@ -31,8 +31,6 @@ function TTYPlayer () {
         var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
         var part_regexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
 
-        var should_print = false;
-
         var output_characters = function (index) {
             var substring = '';
 
@@ -588,20 +586,10 @@ function TTYPlayer () {
             }
         }
 
-        var dp = (new Date()).valueOf();
-        console.log('Processing ' + index + ' took ' + (dp-d) + ' milliseconds.');
-
-        if (should_print || cursor.show) {
-            if (cursor.show) {
-                buffer[cursor.y - 1][cursor.x - 1] = '<span>_</span>';
-                update_chars[cursor.y + '_' + cursor.x] = true;
-            }
-
-            print_buffer();            
+        if (cursor.show) {
+            buffer[cursor.y - 1][cursor.x - 1] = '<span>_</span>';
+            update_chars[cursor.y + '_' + cursor.x] = true;
         }
-
-        var dpp = (new Date()).valueOf();
-        console.log('Printing ' + index + ' took ' + (dpp-dp) + ' milliseconds.');
     };
 
     
@@ -661,8 +649,13 @@ function TTYPlayer () {
 
     var print_frame = function(i) {
         var t = ttyrec[i];
-        var s = binary.getStringAt(t.address, t.len);
-        p.render_frame(s);
+
+        render_frame(binary.getStringAt(t.address, t.len));
+
+        if (should_print) {
+            print_buffer();
+            should_print = false;
+        }
     };
 
     var next_frame =  function() {
@@ -694,8 +687,6 @@ function TTYPlayer () {
         ////////////////////////////////////
         millisec = 0;
 
-        console.log('Wait ' + millisec + ' milliseconds.');
-
         timeout = window.setTimeout(play_data, millisec);
     };
 
@@ -715,6 +706,8 @@ function TTYPlayer () {
 
         update_lines = {};
         update_chars = {};
+
+        should_print = false;
     };
 
     var reset_cursor = function() {
