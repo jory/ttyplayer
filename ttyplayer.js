@@ -741,19 +741,6 @@ function TTYPlayer () {
     };
 
     return {
-        goto_frame: goto_frame,
-
-        print_frame: print_frame,
-
-        next_frame: next_frame,
-
-        previous_frame: function() {
-            if (index > 0) {
-                index -= 1;
-                print_frame(index);
-            }
-        },
-
         parse_data: function (input) {
             binary = input.binaryResponse;
             ttyrec = [];
@@ -779,13 +766,17 @@ function TTYPlayer () {
             }
         },
 
+        reset_buffer: reset_buffer,
+
+        goto_frame: goto_frame,
+
+        next_frame: next_frame,
+
+        print_frame: print_frame,
+
         play_data: play_data,
 
-        stop_data: stop_data,
-
-        render_frame: render_frame,
-        
-        reset_buffer: reset_buffer
+        stop_data: stop_data
     };
 };
 
@@ -805,10 +796,7 @@ $().ready(
 
 $('html').keydown(
     function(event) {
-        if (event.keyCode == '37') {
-            p.previous_frame();
-        }
-        else if (event.keyCode == '39') {
+        if (event.keyCode == '39') {
             p.next_frame();
         }
         else if  (event.keyCode == '32') {
