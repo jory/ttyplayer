@@ -24,6 +24,58 @@ function TTYPlayer () {
     // State variables
     var buffer, cursor, rendition, margins, pre_pend, should_print, update_lines, update_chars;
 
+    var reset_buffer = function() {
+        index = -1;
+        buffer = [[]];
+
+        reset_cursor();
+        reset_rendition();
+        reset_margins();
+
+        pre_pend = '';
+
+        update_lines = {};
+        update_chars = {};
+
+        should_print = false;
+    };
+
+    var reset_cursor = function() {
+        cursor = {
+            x: 1, 
+            y: 1,
+            show: false
+        };
+    };
+
+    var reset_rendition = function () {
+        rendition = {
+            foreground: 'white',
+            background: 'black',
+            light: '',
+            negative: false
+        };
+    };
+
+    var reset_margins = function() {
+        margins = {
+            top: 1,
+            bottom: HEIGHT
+        };
+    };
+
+    var goto_frame = function(n) {
+        if (n < 0 || n >= ttyrec.length) return;
+
+        if (n < index) {
+            reset_buffer();
+        }
+
+        while (index < n) {
+            next_frame();
+        }
+    };
+
     var render_frame = function (string) {
         string = pre_pend + string;
         pre_pend = '';
@@ -686,58 +738,6 @@ function TTYPlayer () {
 
     var stop_data = function() {
         window.clearTimeout(timeout);
-    };
-
-    var reset_buffer = function() {
-        index = -1;
-        buffer = [[]];
-
-        reset_cursor();
-        reset_rendition();
-        reset_margins();
-
-        pre_pend = '';
-
-        update_lines = {};
-        update_chars = {};
-
-        should_print = false;
-    };
-
-    var reset_cursor = function() {
-        cursor = {
-            x: 1, 
-            y: 1,
-            show: false
-        };
-    };
-
-    var reset_rendition = function () {
-        rendition = {
-            foreground: 'white',
-            background: 'black',
-            light: '',
-            negative: false
-        };
-    };
-
-    var reset_margins = function() {
-        margins = {
-            top: 1,
-            bottom: HEIGHT
-        };
-    };
-
-    var goto_frame = function(n) {
-        if (n < 0 || n >= ttyrec.length) return;
-
-        if (n < index) {
-            reset_buffer();
-        }
-
-        while (index < n) {
-            next_frame();
-        }
     };
 
     return {
