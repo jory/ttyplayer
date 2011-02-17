@@ -2,7 +2,7 @@ function TTYPlayer () {
     // Input and pointer to current frame
     var binary = null;
     var ttyrec = null;
-    var index = -1;
+    var index;
 
     // Timeout used while playing the ttyrec.
     var timeout = null;
@@ -12,7 +12,7 @@ function TTYPlayer () {
     var WIDTH = 80;
 
     // The buffer itself.
-    var buffer = [[]];
+    var buffer;
 
     // The spans that correspond to the buffer's cells.
     var frames = {};
@@ -25,27 +25,7 @@ function TTYPlayer () {
     }
 
     // State variables
-    var cursor = {
-        x: 1, y: 1,
-        show: false
-    };
-
-    // The graphic rendition
-    var span = {
-        foreground: 'white',
-        background: 'black',
-        light: '',
-        negative: false
-    };
-
-    // The size of the active buffer
-    var margins = {
-        top: 1,
-        bottom: HEIGHT
-    };
-
-    // Incomplete stuff from the end of a frame
-    var pre_pend = '';
+    var cursor, span, margins, pre_pend;
 
     var render_frame = function (string) {
         string = pre_pend + string;
@@ -763,9 +743,12 @@ function TTYPlayer () {
     var reset_buffer = function() {
         index = -1;
         buffer = [[]];
+
         reset_cursor();
         reset_span();
         reset_margins();
+
+        pre_pend = '';
     };
 
     var reset_cursor = function() {
@@ -805,6 +788,8 @@ function TTYPlayer () {
     };
 
     return {
+        goto_frame: goto_frame,
+
         print_frame: print_frame,
 
         next_frame: next_frame,
@@ -814,11 +799,6 @@ function TTYPlayer () {
                 index -= 1;
                 print_frame(index);
             }
-        },
-
-        set_frame: function(n) {
-            index = n;
-            print_frame(index);
         },
 
         parse_data: function (input) {
@@ -850,7 +830,9 @@ function TTYPlayer () {
 
         stop_data: stop_data,
 
-        render_frame: render_frame
+        render_frame: render_frame,
+        
+        reset_buffer: reset_buffer
     };
 };
 
@@ -861,8 +843,9 @@ $().ready(
         p = TTYPlayer();
         BinaryAjax('foo.ttyrec', 
                    function (data) { 
-                       p.parse_data(data); 
-                       p.set_frame(5);
+                       p.parse_data(data);
+                       p.reset_buffer();
+                       p.goto_frame(0);
                        p.play_data();
                    });
     });
