@@ -510,16 +510,15 @@ function TTYPlayer () {
                 delete_character(n);
             }
             else if (c == 'S') {
-                console.error('scroll_up not defined.');
+                console.log('scroll_up');
             }
             else if (c == 'T') {
-                console.error('scroll_down not defined.');
+                console.log('scroll_down');
             }
             else if (c == 'X') {
                 erase_characters(n);
             }
             else if (c == 'd') {
-                // Line position absolute
                 cursor_position(n, cursor.x);
             }
             else if (c == 'f') {
@@ -554,8 +553,6 @@ function TTYPlayer () {
             string = string.slice(match[0].length);
         };
 
-        var d = (new Date()).valueOf();
-
         // Remove shift-in and shift-out, as I have no idea what to do with them.
         string = string.replace(/\x0f/g, '');
         string = string.replace(/\x0e/g, '');
@@ -578,7 +575,7 @@ function TTYPlayer () {
                     output_characters(i);
                 }
             }
-            else if ( i > 0) {
+            else if (i > 0) {
                 output_characters(i);
             }
             else if (i == 0) {
@@ -592,18 +589,16 @@ function TTYPlayer () {
         }
     };
 
-    
-
     var print_buffer = function () {
 
-        var print_cell = function(i, j) {
+        var print_cell = function(i, j, q) {
 
             var c = buffer[i - 1][j - 1];
             if (c == undefined) {
                 c = '<span>&nbsp;</span>';
             }
 
-            cells[i + '_' + j].html(c);
+            cells[q].html(c);
         };
 
         if (update_lines['-1']) {
@@ -624,22 +619,21 @@ function TTYPlayer () {
 
         for (var point in update_chars) {
             var points = point.split('_');
-            var i = parseInt(points[0]);
-            var j = parseInt(points[1]);
+            var i = points[0];
 
             // Skip any character that will be covered by a line printing.
             if (update_lines[i]) {
                 continue;
             }
 
-            print_cell(i, j);
+            print_cell(parseInt(i), parseInt(points[1]), point);
         }
 
         for (var line in update_lines) {
             var i = parseInt(line);
 
             for (var j = 1; j <= WIDTH; j++) {
-                print_cell(i, j);
+                print_cell(i, j, line + '_' + j);
             }
         }
 
