@@ -71,7 +71,7 @@ function TTYPlayer () {
                     if (code == 8) {
                         // Backspace
                         if (cursor.show) {
-                            buffer[cursor.y - 1][cursor.x -1] = undefined;
+                            buffer[cursor.y - 1][cursor.x - 1] = undefined;
 
                             if (update_lines['-1'] == undefined && 
                                 update_lines[cursor.y] == undefined) {
@@ -110,11 +110,11 @@ function TTYPlayer () {
                         // ESC
                         var next = substring[i + j + 1];
                         if (next == '7') {
-                            console.error('save_cursor');
+                            console.log('save_cursor');
                             j++;
                         }
                         else if (next == '8') {
-                            console.error('restore_cursor');
+                            console.log('restore_cursor');
                             j++;
                         }
                         else if (next == 'M') {
