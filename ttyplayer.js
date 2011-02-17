@@ -12,7 +12,7 @@ function TTYPlayer () {
     var WIDTH = 80;
 
     // State variables
-    var buffer, cursor, span, margins, pre_pend;
+    var buffer, cursor, rendition, margins, pre_pend;
 
     // The spans that correspond to the buffer's cells.
     var cells = {};
@@ -50,13 +50,13 @@ function TTYPlayer () {
             }
             
             var pre = '<span class="';
-            if (span.negative == false) {
-                pre += span.light + span.foreground + '-fg ' +
-                    span.background + '-bg"';
+            if (rendition.negative == false) {
+                pre += rendition.light + rendition.foreground + '-fg ' +
+                    rendition.background + '-bg"';
             }
             else {
-                pre += span.light + span.foreground + '-bg ' +
-                    span.background + '-fg"';
+                pre += rendition.light + rendition.foreground + '-bg ' +
+                    rendition.background + '-fg"';
             }
             pre += '>';
 
@@ -389,84 +389,60 @@ function TTYPlayer () {
 
             var select_graphic_rendition = function(value) {
                 if (value == '') {
-                    span.foreground = 'white';
-                    span.background = 'black';
-                    span.light = '';
-                    span.negative = false;
+                    reset_rendition();
                 }
                 else {
                     var values = value.split(';');
                     var l = values.length;
                     for (var i = 0; i < l; i++) {
-                        var val = values[i];
-                        if (val == '0') {
-                            span.foreground = 'white';
-                            span.background = 'black';
-                            span.light = '';
-                            span.negative = false;
+                        var val = parseInt(values[i]);
+                        if (val == 0) {
+                            reset_rendition();
                         }
-                        else if (val == '1') {
-                            span.light = 'light-';
+                        else if (val == 1) {
+                            rendition.light = 'light-';
                         }
-                        else if (val == '5') {
+                        else if (val == 5) {
                             // Blink.
                         }
-                        else if (val == '7') {
-                            span.negative = true;
+                        else if (val == 7) {
+                            rendition.negative = true;
                         }
-                        else if (val == '30') {
-                            span.foreground = 'black';
+                        else if (val == 39) {
+                            // Default text colour.
+                            rendition.foreground = 'white';
                         }
-                        else if (val == '31') {
-                            span.foreground = 'red';
+                        else if (val == 49) {
+                            // Default background colour.
+                            rendition.background = 'black';
                         }
-                        else if (val == '32') {
-                            span.foreground = 'green';
-                        }
-                        else if (val == '33') {
-                            span.foreground = 'yellow';
-                        }
-                        else if (val == '34') {
-                            span.foreground = 'blue';
-                        }
-                        else if (val == '35') {
-                            span.foreground = 'magenta';
-                        }
-                        else if (val == '36') {
-                            span.foreground = 'cyan';
-                        }
-                        else if (val == '37') {
-                            span.foreground = 'white';
-                        }
-                        else if (val == '39') {
-                            span.foreground = 'white';
-                        }
-                        else if (val == '40') {
-                            span.background = 'black';
-                        }
-                        else if (val == '41') {
-                            span.background = 'red';
-                        }
-                        else if (val == '42') {
-                            span.background = 'green';
-                        }
-                        else if (val == '43') {
-                            span.background = 'yellow';
-                        }
-                        else if (val == '44') {
-                            span.background = 'blue';
-                        }
-                        else if (val == '45') {
-                            span.background = 'magenta';
-                        }
-                        else if (val == '46') {
-                            span.background = 'cyan';
-                        }
-                        else if (val == '47') {
-                            span.background = 'white';
-                        }
-                        else if (val == '49') {
-                            span.background = 'black';
+                        else if ((val >= 30 && val <= 37) || (val >= 40 && val <= 47)) {
+
+                            var background = false;
+                            if ((val - 39) > 0) {
+                                background = true;
+                                val -= 40;
+                            }
+                            else {
+                                val -= 30;
+                            }
+
+                            var colour;
+                            if (val == 0) colour = 'black';
+                            else if (val == 1) colour = 'red';
+                            else if (val == 2) colour = 'green';
+                            else if (val == 3) colour = 'yellow';
+                            else if (val == 4) colour = 'blue';
+                            else if (val == 5) colour = 'magenta';
+                            else if (val == 6) colour = 'cyan';
+                            else if (val == 7) colour = 'white';
+
+                            if (background) {
+                                rendition.background = colour;
+                            }
+                            else {
+                                rendition.foreground = colour;
+                            }
                         }
                         else {
                             console.error('Unhandled SGR parameter: ' + val);
@@ -743,7 +719,7 @@ function TTYPlayer () {
         buffer = [[]];
 
         reset_cursor();
-        reset_span();
+        reset_rendition();
         reset_margins();
 
         pre_pend = '';
@@ -757,8 +733,8 @@ function TTYPlayer () {
         };
     };
 
-    var reset_span = function () {
-        span = {
+    var reset_rendition = function () {
+        rendition = {
             foreground: 'white',
             background: 'black',
             light: '',
