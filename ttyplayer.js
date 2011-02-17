@@ -11,21 +11,19 @@ function TTYPlayer () {
     var HEIGHT = 24;
     var WIDTH = 80;
 
-    // The buffer itself.
-    var buffer;
+    // State variables
+    var buffer, cursor, span, margins, pre_pend;
 
     // The spans that correspond to the buffer's cells.
-    var frames = {};
+    var cells = {};
 
     for (var i = 1; i <= HEIGHT; i++) {
         for (var j = 1; j <= WIDTH; j++) { 
             var x = i + '_' + j;
-            frames[x] = $('#f' + x);
+            cells[x] = $('#f' + x);
         }
     }
 
-    // State variables
-    var cursor, span, margins, pre_pend;
 
     var render_frame = function (string) {
         string = pre_pend + string;
@@ -599,14 +597,14 @@ function TTYPlayer () {
                             c = '<span>&nbsp;</span>';
                         }
 
-                        var f = frames[i + '_' + j];
+                        var f = cells[i + '_' + j];
                         f.html(c);
                     }
                 }
 
                 for (var i = 1; i + m <= HEIGHT; i++) {
                     for (var j = 1; j <= WIDTH; j++) { 
-                        var f = frames[(i + m) + '_' + j];
+                        var f = cells[(i + m) + '_' + j];
                         f.html('<span>&nbsp;</span>');
                     }
                 }
@@ -627,7 +625,7 @@ function TTYPlayer () {
                         c = '<span>&nbsp;</span>';
                     }
 
-                    var f = frames[i + '_' + j];
+                    var f = cells[i + '_' + j];
                     f.html(c);
                 }
 
@@ -641,7 +639,7 @@ function TTYPlayer () {
                             c = '<span>&nbsp;</span>';
                         }
 
-                        var f = frames[i + '_' + j];
+                        var f = cells[i + '_' + j];
                         f.html(c);
                     }
                 }
