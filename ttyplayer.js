@@ -1,34 +1,20 @@
 function TTYPlayer () {
+    // Input and pointer to current frame
     var binary = null;
     var ttyrec = null;
     var index = -1;
 
+    // Timeout used while playing the ttyrec.
     var timeout = null;
 
-    var buffer = [[]];
-
-    var output = '';
-    var pre_pend = '';
-    var point = {
-        x: 1, y: 1,
-        show: false
-    };
-
-    var span = {
-        foreground: 'white',
-        background: 'black',
-        light: '',
-        negative: false
-    };
-
-    var margins = {
-        top: 1,
-        bottom: 24
-    };
-
+    // Constants
     var HEIGHT = 24;
     var WIDTH = 80;
 
+    // The buffer itself.
+    var buffer = [[]];
+
+    // The spans that correspond to the buffer's cells.
     var frames = {};
 
     for (var i = 1; i <= HEIGHT; i++) {
@@ -38,11 +24,32 @@ function TTYPlayer () {
         }
     }
 
+    // State variables
+    var cursor = {
+        x: 1, y: 1,
+        show: false
+    };
+
+    // The graphic rendition
+    var span = {
+        foreground: 'white',
+        background: 'black',
+        light: '',
+        negative: false
+    };
+
+    // The size of the active buffer
+    var margins = {
+        top: 1,
+        bottom: 24
+    };
+
+    // Incomplete stuff from the end of a frame
+    var pre_pend = '';
+
     var render_frame = function (string) {
         string = pre_pend + string;
         pre_pend = '';
-
-        output = string;
 
         var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
         var part_regexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
@@ -91,41 +98,41 @@ function TTYPlayer () {
                 if (code < 32) {
                     if (code == 8) {
                         // Backspace
-                        if (point.show) {
-                            buffer[point.y - 1][point.x -1] = undefined;
+                        if (cursor.show) {
+                            buffer[cursor.y - 1][cursor.x -1] = undefined;
 
                             if (update_lines['-1'] == undefined && 
-                                update_lines[point.y] == undefined) {
-                                update_chars[point.y + '_' + point.x] = true;
+                                update_lines[cursor.y] == undefined) {
+                                update_chars[cursor.y + '_' + cursor.x] = true;
                             }
                         }
-                        point.x--;
+                        cursor.x--;
                     }
                     else if (code == 10) {
                         // LF
-                        buffer.splice(point.y, 0, []);
+                        buffer.splice(cursor.y, 0, []);
                         buffer.splice(margins.top - 1, 1);
 
                         if (update_lines['-1'] == undefined) {
-                            for (var k = margins.top; k <= point.y; k++) {
+                            for (var k = margins.top; k <= cursor.y; k++) {
                                 update_lines[k] = true;
                             }
                         }
                     }
                     else if (code == 13) {
                         // CR
-                        point.x = 1;
-                        point.y++;
+                        cursor.x = 1;
+                        cursor.y++;
 
-                        if (point.y > HEIGHT) {
-                            point.y = HEIGHT;
+                        if (cursor.y > HEIGHT) {
+                            cursor.y = HEIGHT;
                         }
 
-                        if (buffer[point.y - 1] == undefined) {
-                            buffer[point.y - 1] = [];
+                        if (buffer[cursor.y - 1] == undefined) {
+                            buffer[cursor.y - 1] = [];
                         }
 
-                        update_lines[point.y] = true;
+                        update_lines[cursor.y] = true;
                     }
                     else if (code == 27) {
                         // ESC
@@ -140,11 +147,11 @@ function TTYPlayer () {
                         }
                         else if (next == 'M') {
                             // Reverse LF
-                            buffer.splice(point.y - 1, 0, []);
+                            buffer.splice(cursor.y - 1, 0, []);
                             buffer.splice(margins.bottom, 1);
 
                             if (update_lines['-1'] == undefined) {
-                                for (var k = point.y; k <= margins.bottom; k++) {
+                                for (var k = cursor.y; k <= margins.bottom; k++) {
                                     update_lines[k] = true;
                                 }
                             }
@@ -164,14 +171,14 @@ function TTYPlayer () {
                         character = '&nbsp;';
                     }
 
-                    buffer[point.y - 1][point.x - 1] = pre + character + post;
+                    buffer[cursor.y - 1][cursor.x - 1] = pre + character + post;
                     
                     if (update_lines['-1'] == undefined && 
-                        update_lines[point.y] == undefined) {
-                        update_chars[point.y + '_' + point.x] = true;
+                        update_lines[cursor.y] == undefined) {
+                        update_chars[cursor.y + '_' + cursor.x] = true;
                     }
 
-                    point.x++;
+                    cursor.x++;
                 }
             }
 
@@ -182,51 +189,51 @@ function TTYPlayer () {
 
             var init_rows = function(n) {
                 for (var i = 0; i < n; i++) {
-                    if (buffer[point.y + i] == undefined) {
-                        buffer[point.y + i] = [];
+                    if (buffer[cursor.y + i] == undefined) {
+                        buffer[cursor.y + i] = [];
                     }
                 }
             };
 
             var cursor_up = function(n) {
-                if (point.y == 1) return;
+                if (cursor.y == 1) return;
                 if (isNaN(n)) n = 1;
 
-                point.y -= n;
+                cursor.y -= n;
 
-                if (point.y < 1) point.y = 1;
+                if (cursor.y < 1) cursor.y = 1;
             };
 
             var cursor_down = function(n) {
                 if (isNaN(n)) n = 1;
 
                 init_rows(n);
-                point.y += n;
+                cursor.y += n;
             };
 
             var cursor_forward = function(n) {
                 if (isNaN(n)) n = 1;
 
-                point.x += n;
+                cursor.x += n;
             };
 
             var cursor_back = function(n) {
-                if (point.x == 1) return;
+                if (cursor.x == 1) return;
                 if (isNaN(n)) n = 1;
 
-                point.x -= n;
+                cursor.x -= n;
 
-                if (point.x < 1) point.x = 1;
+                if (cursor.x < 1) cursor.x = 1;
             };
 
             var cursor_next_line = function(n) {
                 cursor_down(n);
-                point.x = 1;
+                cursor.x = 1;
             };
 
             var cursor_prev_line = function(n) {
                 cursor_up(n);
-                point.x = 1;
+                cursor.x = 1;
             };
 
             var cursor_horizontal_absolute = function(n) {
@@ -235,58 +242,58 @@ function TTYPlayer () {
                     return;
                 }
 
-                point.x = n;
+                cursor.x = n;
             };
 
             var cursor_position = function(row, column) {
-                if (row < point.y) {
-                    cursor_up(point.y - row);
+                if (row < cursor.y) {
+                    cursor_up(cursor.y - row);
                 }
-                else if (row > point.y) {
-                    cursor_down(row - point.y);
+                else if (row > cursor.y) {
+                    cursor_down(row - cursor.y);
                 }
 
-                point.x = column;
+                cursor.x = column;
             };
 
             var erase_data = function(n) {
                 if (isNaN(n)) n = 0;
                 if (n == 0) {
                     // Clear from the cursor to the end of the buffer.
-                    buffer[point.y - 1].splice(point.x - 1);
-                    buffer.splice(point.y);
-                    init_rows(HEIGHT - point.y);
+                    buffer[cursor.y - 1].splice(cursor.x - 1);
+                    buffer.splice(cursor.y);
+                    init_rows(HEIGHT - cursor.y);
 
                     if (update_lines['-1'] == undefined) {                        
-                        if (update_lines[point.y] == undefined) {
-                            for (var i = point.x; i <= WIDTH; i++) {
-                                update_chars[point.y + '_' + i] = true;                            
+                        if (update_lines[cursor.y] == undefined) {
+                            for (var i = cursor.x; i <= WIDTH; i++) {
+                                update_chars[cursor.y + '_' + i] = true;                            
                             }
                         }
 
-                        for (var j = point.y + 1; j <= HEIGHT; j++) {
+                        for (var j = cursor.y + 1; j <= HEIGHT; j++) {
                             update_lines[j] = true;
                         }
                     }
                 }
                 else if (n == 1) {
                     // Clear from the cursor to beginning of buffer.
-                    for (var i = 0; i < point.y - 1; i++) {
+                    for (var i = 0; i < cursor.y - 1; i++) {
                         buffer[i] = [];
                     }
 
-                    for (var j = 0; j < point.x; j++) {
-                        buffer[point.y - 1][j] = undefined;
+                    for (var j = 0; j < cursor.x; j++) {
+                        buffer[cursor.y - 1][j] = undefined;
                     }
 
                     if (update_lines['-1'] == undefined) {
-                        for (var i = 1; i < point.y; i++) {
+                        for (var i = 1; i < cursor.y; i++) {
                             update_lines[i] = true;
                         }
 
-                        if (update_lines[point.y] == undefined) {
-                            for (var j = 1; j <= point.x; j++) {
-                                update_chars[point.y + '_' + j] = true;
+                        if (update_lines[cursor.y] == undefined) {
+                            for (var j = 1; j <= cursor.x; j++) {
+                                update_chars[cursor.y + '_' + j] = true;
                             }
                         }
                     }
@@ -295,10 +302,10 @@ function TTYPlayer () {
                     buffer = [[]];
                     
                     // Moving the cursor might not be the right behaviour.
-                    point.x = 1;
-                    point.y = 1;
+                    cursor.x = 1;
+                    cursor.y = 1;
 
-                    init_rows(HEIGHT - point.y);
+                    init_rows(HEIGHT - cursor.y);
 
                     update_lines['-1'] = true;
                 }
@@ -310,32 +317,32 @@ function TTYPlayer () {
             var erase_in_line = function(n) {
                 if (isNaN(n)) n = 0;
                 if (n == 0) {
-                    buffer[point.y - 1].splice(point.x - 1);
+                    buffer[cursor.y - 1].splice(cursor.x - 1);
  
                    if (update_lines['-1'] == undefined &&
-                       update_lines[point.y] == undefined) {
-                       for (var i = point.x; i <= WIDTH; i++) {
-                           update_chars[point.y + '_' + i] = true;
+                       update_lines[cursor.y] == undefined) {
+                       for (var i = cursor.x; i <= WIDTH; i++) {
+                           update_chars[cursor.y + '_' + i] = true;
                        }
                    }
                 }
                 else if (n == 1) {
-                    for (var i = 0; i < point.x; i++) {
-                        buffer[point.y - 1][i] = undefined;
+                    for (var i = 0; i < cursor.x; i++) {
+                        buffer[cursor.y - 1][i] = undefined;
                     }
 
                    if (update_lines['-1'] == undefined &&
-                       update_lines[point.y] == undefined) {
-                       for (var j = 1; j <= point.x; j++) {
-                           update_chars[point.y + '_' + j] = true;
+                       update_lines[cursor.y] == undefined) {
+                       for (var j = 1; j <= cursor.x; j++) {
+                           update_chars[cursor.y + '_' + j] = true;
                        }
                    }
                 }
                 else if (n == 2) {
-                    buffer[point.y - 1] = [];
+                    buffer[cursor.y - 1] = [];
 
                     if (update_lines['-1'] == undefined) {
-                        update_lines[point.y] = true;
+                        update_lines[cursor.y] = true;
                     }
                 }
                 else {
@@ -345,13 +352,13 @@ function TTYPlayer () {
 
             var erase_characters = function(n) {
                 for (var i = 0; i < n; i++) {
-                    buffer[point.y - 1][point.x - 1 + i] = undefined;
+                    buffer[cursor.y - 1][cursor.x - 1 + i] = undefined;
                 }
 
                 if (update_lines['-1'] == undefined &&
-                    update_lines[point.y] == undefined) {
+                    update_lines[cursor.y] == undefined) {
                     for (var i = 0; i < n; i++) {
-                        update_chars[point.y + '_' + (point.x + i)] = true;
+                        update_chars[cursor.y + '_' + (cursor.x + i)] = true;
                     }
                 }
             };
@@ -359,11 +366,11 @@ function TTYPlayer () {
             var delete_line = function(n) {
                 if (isNaN(n)) n = 1;
 
-                buffer.splice(point.y - 1, n);
+                buffer.splice(cursor.y - 1, n);
 
                 if (update_lines['-1'] == undefined) {
-                    for (var i = 0; point.y + i <= HEIGHT; i++) {
-                        update_lines[(point.y + i)] = true;
+                    for (var i = 0; cursor.y + i <= HEIGHT; i++) {
+                        update_lines[(cursor.y + i)] = true;
                     }
                 }
 
@@ -376,12 +383,12 @@ function TTYPlayer () {
             var delete_character = function(n) {
                 if (isNaN(n)) n = 1;
 
-                buffer[point.y - 1].splice(point.x - 1, n);
+                buffer[cursor.y - 1].splice(cursor.x - 1, n);
 
                 if (update_lines['-1'] == undefined &&
-                    update_lines[point.y] == undefined) {
-                    for (var i = 0; i <= (WIDTH - point.x); i++) {
-                        update_chars[point.y + '_' + (point.x + i)] = true;
+                    update_lines[cursor.y] == undefined) {
+                    for (var i = 0; i <= (WIDTH - cursor.x); i++) {
+                        update_chars[cursor.y + '_' + (cursor.x + i)] = true;
                     }
                 }
 
@@ -391,12 +398,12 @@ function TTYPlayer () {
                 if (isNaN(n)) n = 1;
 
                 for (var i = 0; i < n; i++) {
-                    buffer.splice(point.y - 1, 0, []);                    
+                    buffer.splice(cursor.y - 1, 0, []);                    
                 }
                 buffer.splice(margins.bottom, n);
 
                 if (update_lines['-1'] == undefined) {
-                    for (var k = point.y; k <= margins.bottom; k++) {
+                    for (var k = cursor.y; k <= margins.bottom; k++) {
                         update_lines[k] = true;
                     }
                 }
@@ -565,7 +572,7 @@ function TTYPlayer () {
             }
             else if (c == 'd') {
                 // Line position absolute
-                cursor_position(n, point.x);
+                cursor_position(n, cursor.x);
             }
             else if (c == 'f') {
                 var x = 1;
@@ -578,12 +585,12 @@ function TTYPlayer () {
                 cursor_position(y, x);
             }
             else if (c == 'h' && value == '?25') {
-                point.show = true;
+                cursor.show = true;
             }
 
             else if (c == 'l' && value == '?25') {
-                point.show = false;
-                buffer[point.y - 1][point.x - 1] = undefined;
+                cursor.show = false;
+                buffer[cursor.y - 1][cursor.x - 1] = undefined;
                 should_print = true;
             }
             else if (c == 'm') {
@@ -667,9 +674,9 @@ function TTYPlayer () {
         string = string.replace(/\x0f/g, '');
         string = string.replace(/\x0e/g, '');
 
-        if (point.show) {
-            buffer[point.y - 1][point.x - 1] = '<span>&nbsp;</span>';
-            update_chars[point.y + '_' + point.x] = true;
+        if (cursor.show) {
+            buffer[cursor.y - 1][cursor.x - 1] = '<span>&nbsp;</span>';
+            update_chars[cursor.y + '_' + cursor.x] = true;
         }
 
         while (string != '') {
@@ -696,10 +703,10 @@ function TTYPlayer () {
         var dp = (new Date()).valueOf();
         console.log('Processing ' + index + ' took ' + (dp-d) + ' milliseconds.');
 
-        if (should_print || point.show) {
-            if (point.show) {
-                buffer[point.y - 1][point.x - 1] = '<span>_</span>';
-                update_chars[point.y + '_' + point.x] = true;
+        if (should_print || cursor.show) {
+            if (cursor.show) {
+                buffer[cursor.y - 1][cursor.x - 1] = '<span>_</span>';
+                update_chars[cursor.y + '_' + cursor.x] = true;
             }
 
             print_buffer();            
@@ -746,9 +753,7 @@ function TTYPlayer () {
 
         console.log('Wait ' + millisec + ' milliseconds.');
 
-        // if (index < 2524) {
-            timeout = window.setTimeout(play_data, millisec);
-        // }
+        timeout = window.setTimeout(play_data, millisec);
     };
 
     var stop_data = function() {
@@ -756,33 +761,9 @@ function TTYPlayer () {
     };
 
     return {
-        get_buffer: function() {
-            return buffer;
-        },
-
-        get_index: function() {
-            return index;
-        },
-
-        get_output: function() {
-            return output;
-        },
-
-        get_point: function() {
-            return point;
-        },
-
-        get_prepend: function() {
-            return pre_pend;
-        },
-
-        get_ttyrec: function() {
-            return ttyrec;
-        },
-
         clear_frame: function() {
             buffer = [[]];
-            point = { x:1, y: 1};
+            cursor = { x:1, y: 1};
             render_frame('');
         },
 
