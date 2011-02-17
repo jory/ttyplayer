@@ -41,7 +41,7 @@ function TTYPlayer () {
     // The size of the active buffer
     var margins = {
         top: 1,
-        bottom: 24
+        bottom: HEIGHT
     };
 
     // Incomplete stuff from the end of a frame
@@ -760,13 +760,51 @@ function TTYPlayer () {
         window.clearTimeout(timeout);
     };
 
-    return {
-        clear_frame: function() {
-            buffer = [[]];
-            cursor = { x:1, y: 1};
-            render_frame('');
-        },
+    var reset_buffer = function() {
+        index = -1;
+        buffer = [[]];
+        reset_cursor();
+        reset_span();
+        reset_margins();
+    };
 
+    var reset_cursor = function() {
+        cursor = {
+            x: 1, 
+            y: 1,
+            show: false
+        };
+    };
+
+    var reset_span = function () {
+        span = {
+            foreground: 'white',
+            background: 'black',
+            light: '',
+            negative: false
+        };
+    };
+
+    var reset_margins = function() {
+        margins = {
+            top: 1,
+            bottom: HEIGHT
+        };
+    };
+
+    var goto_frame = function(n) {
+        if (n < 0 || n >= ttyrec.length) return;
+
+        if (n < index) {
+            reset_buffer();
+        }
+
+        while (index < n) {
+            next_frame();
+        }
+    };
+
+    return {
         print_frame: print_frame,
 
         next_frame: next_frame,
