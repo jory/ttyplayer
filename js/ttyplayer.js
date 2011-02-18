@@ -698,10 +698,6 @@ function TTYPlayer () {
     };
 
     var print_frame = function(i) {
-        var t = ttyrec[i];
-
-        render_frame(binary.getStringAt(t.address, t.len));
-
         if (should_print) {
             print_buffer();
             should_print = false;
@@ -711,7 +707,9 @@ function TTYPlayer () {
     var next_frame =  function() {
         if (index < ttyrec.length) {
             index += 1;
-            print_frame(index);
+
+            var t = ttyrec[index];
+            render_frame(binary.getStringAt(t.address, t.len));
         }
     };
 
@@ -725,6 +723,7 @@ function TTYPlayer () {
         }
 
         next_frame();
+        print_frame();
         var current = ttyrec[index];
         var next = ttyrec[index + 1];
 
@@ -825,6 +824,7 @@ $().ready(
                                change: function(event, ui) {
                                    if (event.originalEvent != undefined) {
                                        p.goto_frame(ui.value);
+                                       p.print_frame();
                                        c.attr('value', ui.value);
                                    }
                                }
@@ -839,6 +839,7 @@ $('html').keydown(
     function(event) {
         if (event.keyCode == '39') {
             p.next_frame();
+            p.print_frame();
         }
         else if  (event.keyCode == '32') {
             p.stop_data();
