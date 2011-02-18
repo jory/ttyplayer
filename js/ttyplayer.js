@@ -1,4 +1,5 @@
 var p, s, c, b;
+var playing = false;
 
 function TTYPlayer () {
     // Input and pointer to current frame
@@ -25,8 +26,6 @@ function TTYPlayer () {
 
     // State variables
     var buffer, cursor, rendition, margins, pre_pend, should_print, update_lines, update_chars;
-
-    var playing = false;
 
     var reset_buffer = function() {
         index = -1;
@@ -823,9 +822,12 @@ $().ready(
                                max: l,
                                change: function(event, ui) {
                                    if (event.originalEvent != undefined) {
+                                       var was_playing = playing;
+                                       if (playing) p.stop_data();
                                        p.goto_frame(ui.value);
                                        p.print_frame();
                                        c.attr('value', ui.value);
+                                       if (was_playing) p.play_data();
                                    }
                                }
                            });
