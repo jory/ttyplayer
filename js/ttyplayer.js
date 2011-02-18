@@ -1,3 +1,5 @@
+var p, s, c, b;
+
 function TTYPlayer () {
     // Input and pointer to current frame
     var binary = null;
@@ -15,7 +17,7 @@ function TTYPlayer () {
     var cells = {};
 
     for (var i = 1; i <= HEIGHT; i++) {
-        for (var j = 1; j <= WIDTH; j++) { 
+        for (var j = 1; j <= WIDTH; j++) {
             var x = i + '_' + j;
             cells[x] = $('#f' + x);
         }
@@ -23,6 +25,8 @@ function TTYPlayer () {
 
     // State variables
     var buffer, cursor, rendition, margins, pre_pend, should_print, update_lines, update_chars;
+
+    var playing = false;
 
     var reset_buffer = function() {
         index = -1;
@@ -42,7 +46,7 @@ function TTYPlayer () {
 
     var reset_cursor = function() {
         cursor = {
-            x: 1, 
+            x: 1,
             y: 1,
             show: false
         };
@@ -89,12 +93,12 @@ function TTYPlayer () {
             if (index == -1) {
                 substring = string;
                 string = '';
-            } 
+            }
             else {
                 substring = string.slice(0, index);
                 string = string.slice(index);
             }
-            
+
             var pre = '<span class="';
             if (rendition.negative == false) {
                 pre += rendition.light + rendition.foreground + '-fg ' +
@@ -125,7 +129,7 @@ function TTYPlayer () {
                         if (cursor.show) {
                             buffer[cursor.y - 1][cursor.x - 1] = undefined;
 
-                            if (update_lines['-1'] == undefined && 
+                            if (update_lines['-1'] == undefined &&
                                 update_lines[cursor.y] == undefined) {
                                 update_chars[cursor.y + '_' + cursor.x] = true;
                             }
@@ -196,8 +200,8 @@ function TTYPlayer () {
                     }
 
                     buffer[cursor.y - 1][cursor.x - 1] = pre + character + post;
-                    
-                    if (update_lines['-1'] == undefined && 
+
+                    if (update_lines['-1'] == undefined &&
                         update_lines[cursor.y] == undefined) {
                         update_chars[cursor.y + '_' + cursor.x] = true;
                     }
@@ -288,10 +292,10 @@ function TTYPlayer () {
                     buffer.splice(cursor.y);
                     init_rows(HEIGHT - cursor.y);
 
-                    if (update_lines['-1'] == undefined) {                        
+                    if (update_lines['-1'] == undefined) {
                         if (update_lines[cursor.y] == undefined) {
                             for (var i = cursor.x; i <= WIDTH; i++) {
-                                update_chars[cursor.y + '_' + i] = true;                            
+                                update_chars[cursor.y + '_' + i] = true;
                             }
                         }
 
@@ -324,7 +328,7 @@ function TTYPlayer () {
                 }
                 else if (n == 2) {
                     buffer = [[]];
-                    
+
                     // Moving the cursor might not be the right behaviour.
                     cursor.x = 1;
                     cursor.y = 1;
@@ -342,7 +346,7 @@ function TTYPlayer () {
                 if (isNaN(n)) n = 0;
                 if (n == 0) {
                     buffer[cursor.y - 1].splice(cursor.x - 1);
- 
+
                    if (update_lines['-1'] == undefined &&
                        update_lines[cursor.y] == undefined) {
                        for (var i = cursor.x; i <= WIDTH; i++) {
@@ -422,7 +426,7 @@ function TTYPlayer () {
                 if (isNaN(n)) n = 1;
 
                 for (var i = 0; i < n; i++) {
-                    buffer.splice(cursor.y - 1, 0, []);                    
+                    buffer.splice(cursor.y - 1, 0, []);
                 }
                 buffer.splice(margins.bottom, n);
 
@@ -663,7 +667,7 @@ function TTYPlayer () {
             }
 
             for (var i = 1; i + m <= HEIGHT; i++) {
-                for (var j = 1; j <= WIDTH; j++) { 
+                for (var j = 1; j <= WIDTH; j++) {
                     cells[(i + m) + '_' + j].html('<span>&nbsp;</span>');
                 }
             }
@@ -712,18 +716,29 @@ function TTYPlayer () {
     };
 
     var play_data = function() {
+
+        if (!playing) {
+            playing = true;
+
+            b.click(function() { stop_data(); });
+            b.button('option', 'label', 'Stop');
+        }
+
         next_frame();
         var current = ttyrec[index];
         var next = ttyrec[index + 1];
 
+        s.slider("option", "value", index);
+        c.attr('value', index);
+
         var millisec;
         if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
         else if (next.sec > current.sec) {
-            millisec = ((next.sec - current.sec - 1) * 1000 + 
+            millisec = ((next.sec - current.sec - 1) * 1000 +
                         ((1000000 - current.usec) + next.usec)/1000);
         }
         else {
-            console.error('Frame ' + (index + 1) + 
+            console.error('Frame ' + (index + 1) +
                           'reports an earlier time than frame ' + index);
             millisec = 0;
         }
@@ -737,7 +752,19 @@ function TTYPlayer () {
     };
 
     var stop_data = function() {
+
+        if (playing) {
+            playing = false;
+
+            b.click(function() { play_data(); });
+            b.button('option', 'label', 'Play');
+        }
+
         window.clearTimeout(timeout);
+    };
+
+    var get_ttyrec = function() {
+        return ttyrec;
     };
 
     return {
@@ -755,7 +782,7 @@ function TTYPlayer () {
                 var address = offset + 12;
 
                 ttyrec.push(
-                    { 
+                    {
                         sec: sec,
                         usec: usec,
                         len: len,
@@ -776,20 +803,34 @@ function TTYPlayer () {
 
         play_data: play_data,
 
-        stop_data: stop_data
+        stop_data: stop_data,
+
+        get_ttyrec: get_ttyrec
     };
 };
-
-var p;
 
 $().ready(
     function() {
         p = TTYPlayer();
-        BinaryAjax('foo.ttyrec', 
-                   function (data) { 
+        BinaryAjax('foo.ttyrec',
+                   function (data) {
                        p.parse_data(data);
                        p.reset_buffer();
                        p.goto_frame(0);
+                       b = $('button').button();
+                       var l = p.get_ttyrec().length;
+                       s = $('#slider').slider(
+                           {
+                               max: l,
+                               change: function(event, ui) {
+                                   if (event.originalEvent != undefined) {
+                                       p.goto_frame(ui.value);
+                                       c.attr('value', ui.value);
+                                   }
+                               }
+                           });
+                       c = $('#current');
+                       $('#total').html('/' + l);
                        p.play_data();
                    });
     });
