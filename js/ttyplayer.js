@@ -457,6 +457,9 @@ function TTYPlayer () {
                         else if (val == 7) {
                             rendition.negative = true;
                         }
+                        else if (val == 27) {
+                            rendition.negative = false;
+                        }
                         else if (val == 39) {
                             // Default text colour.
                             rendition.foreground = 'white';
