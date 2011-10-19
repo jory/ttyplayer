@@ -16,12 +16,16 @@ function TTYPlayer () {
 
     // The spans that correspond to the buffer's cells.
     var cells = {};
+    var frame = $('#inner-frame');
 
     for (var i = 1; i <= HEIGHT; i++) {
         for (var j = 1; j <= WIDTH; j++) {
             var x = i + '_' + j;
-            cells[x] = $('#f' + x);
+
+            frame.append('<span id="f' + x + '">&nbsp;</span>')
+            cells[x] = frame.children().last();
         }
+        frame.append('<br/>');
     }
 
     // State variables
@@ -745,6 +749,7 @@ function TTYPlayer () {
         // NOTE: Remove the following line!
         ////////////////////////////////////
         millisec = 0;
+        ////////////////////////////////////
 
         timeout = window.setTimeout(play_data, millisec);
     };
