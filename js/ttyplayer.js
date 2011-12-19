@@ -1,11 +1,10 @@
-var p, s, c, b;
-var playing = false;
-
 function TTYPlayer () {
     // Input and pointer to current frame
-    var binary = null;
+    var blob = null;
     var ttyrec = null;
-    var index;
+    var index = -1;
+
+    var playing = false;
 
     // Timeout used while playing the ttyrec.
     var timeout = null;
@@ -13,6 +12,7 @@ function TTYPlayer () {
     // Constants
     var HEIGHT = 24;
     var WIDTH = 80;
+    var LONG = 4;
 
     // The spans that correspond to the buffer's cells.
     var cells = {};
@@ -709,10 +709,42 @@ function TTYPlayer () {
 
     var next_frame =  function() {
         if (index < ttyrec.length) {
-            index += 1;
 
-            var t = ttyrec[index];
-            render_frame(binary.getStringAt(t.address, t.len));
+            index += 1;
+            var current = ttyrec[index];
+
+            render_frame(blob.slice(current.start, current.end));
+            print_frame();
+
+            var next = ttyrec[index + 1];
+            if (next) {
+                var millisec;
+                if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
+                else if (next.sec > current.sec) {
+                    millisec = ((next.sec - current.sec - 1) * 1000 +
+                                ((1000000 - current.usec) + next.usec)/1000);
+                }
+                else {
+                    console.error('Frame ' + (index + 1) +
+                                  'reports an earlier time than frame ' + index);
+                    millisec = 0;
+                }
+
+                ////////////////////////////////////
+                // NOTE: The wait should account for the maximal amount of
+                // time it takes to draw the frame.
+                ////////////////////////////////////
+
+                // console.log(millisec);
+
+                ////////////////////////////////////
+                // NOTE: Remove the following line!
+                ////////////////////////////////////
+                millisec = 0;
+                ////////////////////////////////////
+
+                timeout = window.setTimeout(next_frame, millisec);
+            }
         }
     };
 
@@ -720,47 +752,19 @@ function TTYPlayer () {
 
         if (!playing) {
             playing = true;
-
-            b.click(function() { stop_data(); });
-            b.button('option', 'label', 'Stop');
+            $("#play").attr("disabled", "t");
+            $("#pause").attr("disabled", "");
         }
 
         next_frame();
-        print_frame();
-        var current = ttyrec[index];
-        var next = ttyrec[index + 1];
-
-        s.slider("option", "value", index);
-        c.attr('value', index);
-
-        var millisec;
-        if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
-        else if (next.sec > current.sec) {
-            millisec = ((next.sec - current.sec - 1) * 1000 +
-                        ((1000000 - current.usec) + next.usec)/1000);
-        }
-        else {
-            console.error('Frame ' + (index + 1) +
-                          'reports an earlier time than frame ' + index);
-            millisec = 0;
-        }
-
-        ////////////////////////////////////
-        // NOTE: Remove the following line!
-        ////////////////////////////////////
-        millisec = 0;
-        ////////////////////////////////////
-
-        timeout = window.setTimeout(play_data, millisec);
     };
 
     var stop_data = function() {
 
         if (playing) {
             playing = false;
-
-            b.click(function() { play_data(); });
-            b.button('option', 'label', 'Play');
+            $("#pause").attr("disabled", "t");
+            $("#play").attr("disabled", "");
         }
 
         window.clearTimeout(timeout);
@@ -770,30 +774,55 @@ function TTYPlayer () {
         return ttyrec;
     };
 
+    var parseLongAt = function(DOMString, offset) {
+        var a = DOMString.charCodeAt(offset);
+        var b = DOMString.charCodeAt(offset + 1);
+        var c = DOMString.charCodeAt(offset + 2);
+        var d = DOMString.charCodeAt(offset + 3);
+
+        var long =
+           (((((d << 8) + c) << 8) + b) << 8) + a;
+        if (long < 0) long += 4294967296;
+
+        return long;
+    };
+
     return {
-        parse_data: function (input) {
-            binary = input.binaryResponse;
+        parse_data: function (file) {
             ttyrec = [];
 
-            var length = binary.getLength();
             var offset = 0;
+            var size = file.size;
 
-            while (offset < length) {
-                var sec = binary.getLongAt(offset + 0, false);
-                var usec = binary.getLongAt(offset + 4, false);
-                var len = binary.getLongAt(offset + 8, false);
-                var address = offset + 12;
+            var TIME = LONG * 2;
 
-                ttyrec.push(
-                    {
+            var parse_helper = function(evt) {
+
+                blob = evt.target.result;
+
+                while (offset < size) {
+                    var sec = parseLongAt(blob, offset);
+                    var usec = parseLongAt(blob, offset + LONG);
+                    var length = parseLongAt(blob, offset + TIME);
+
+                    offset += TIME + LONG;
+
+                    ttyrec.push({
                         sec: sec,
                         usec: usec,
-                        len: len,
-                        address: address
+                        start: offset,
+                        end: offset + length
                     });
 
-                offset += (12 + len);
-            }
+                    offset += length;
+                }
+
+                reset_buffer();
+            };
+
+            var reader = new FileReader();
+            reader.onload = parse_helper;
+            reader.readAsBinaryString(file);
         },
 
         reset_buffer: reset_buffer,
@@ -812,38 +841,34 @@ function TTYPlayer () {
     };
 };
 
-$().ready(
-    function() {
-        p = TTYPlayer();
-        BinaryAjax('foo.ttyrec',
-                   function (data) {
-                       p.parse_data(data);
-                       p.reset_buffer();
-                       p.goto_frame(0);
-                       b = $('button').button();
-                       var l = p.get_ttyrec().length;
-                       s = $('#slider').slider(
-                           {
-                               max: l,
-                               change: function(event, ui) {
-                                   if (event.originalEvent != undefined) {
-                                       var was_playing = playing;
-                                       if (playing) p.stop_data();
-                                       p.goto_frame(ui.value);
-                                       p.print_frame();
-                                       c.attr('value', ui.value);
-                                       if (was_playing) p.play_data();
-                                   }
-                               }
-                           });
-                       c = $('#current');
-                       $('#total').html('/' + l);
-                       p.play_data();
-                   });
+$().ready(function() {
+    var p = TTYPlayer();
+
+    $("#file").bind('change', function(evt) {
+        var file = evt.target.files[0];
+
+        p.parse_data(file);
+
+        $("#play").attr("disabled", "");
+        $("#pause").attr("disabled", "t");
+        $("#reset").attr("disabled", "");
     });
 
-$('html').keydown(
-    function(event) {
+    $("#play").click(function() {
+        p.play_data();
+    });
+
+    $("#pause").click(function(){
+        p.stop_data();
+    });
+
+    $("#reset").click(function() {
+        p.reset_buffer();
+        p.should_print = true;
+        p.print_frame();
+    });
+
+    $('html').keydown(function(event) {
         if (event.keyCode == '39') {
             p.next_frame();
             p.print_frame();
@@ -852,3 +877,4 @@ $('html').keydown(
             p.stop_data();
         }
     });
+});

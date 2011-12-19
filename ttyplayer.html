@@ -1,25 +1,34 @@
 <html>
     <head>
 	<link rel="stylesheet" href="css/ttyplayer.css" type="text/css" />
-	<link rel="stylesheet" href="css/overcast/jquery-ui-1.8.9.custom.css" 
+	<link rel="stylesheet" href="css/overcast/jquery-ui-1.8.9.custom.css"
               type="text/css" />
 	<script type="text/javascript" src="js/jquery-1.4.4.min.js"></script>
-	<script type="text/javascript" src="js/jquery-ui-1.8.9.custom.min.js"></script>
 	<script type="text/javascript" src="js/binaryajax.js"></script>
 	<script type="text/javascript" src="js/ttyplayer.js"></script>
 
         <style>
-          #demo-frame > div.demo { padding: 10px !important; }
+          #frame {
+            float: left;
+          }
+
+          #inner-frame {
+            font-family: monospace;
+            padding: 10px;
+            font-size: 100%;
+          }
         </style>
     </head>
     <body>
-      <div id="frame" style="float:left">
-        <div id="inner-frame" class="black-bg white-fg" style="font-family: monospace; padding: 10px; font-size: 100%"></div>
+      <div id="frame">
+        <div id="inner-frame" class="black-bg white-fg"></div>
+        <br/>
         <div class="demo">
-          <button style="font-size: 62.5%;">Play</button>
-          <div id="slider" style="font-size: 62.5%;"></div>
-          <input id="current" role="textbox" style="float:left">
-          <div id="total"></div>
+          <input type="file" id="file" name="file"/>
+          <br/><br/>
+          <button id="play" disabled="t">Play</button>
+          <button id="pause" disabled="t">Pause</button>
+          <button id="reset" disabled="t">Reset</button>
         </div>
       </div>
     </body>
