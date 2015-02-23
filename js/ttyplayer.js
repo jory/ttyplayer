@@ -14,19 +14,7 @@ function TTYPlayer () {
     var WIDTH = 80;
     var LONG = 4;
 
-    // The spans that correspond to the buffer's cells.
-    var cells = {};
-    var frame = $('#inner-frame');
-
-    for (var i = 1; i <= HEIGHT; i++) {
-        for (var j = 1; j <= WIDTH; j++) {
-            var x = i + '_' + j;
-
-            frame.append('<span id="f' + x + '">&nbsp;</span>')
-            cells[x] = frame.children().last();
-        }
-        frame.append('<br/>');
-    }
+    var frames = [];
 
     // State variables
     var buffer, cursor, rendition, margins, pre_pend, should_print, update_lines, update_chars;
@@ -36,8 +24,8 @@ function TTYPlayer () {
         buffer = [[]];
 
         reset_cursor();
-        reset_rendition();
         reset_margins();
+        reset_rendition();
 
         pre_pend = '';
 
@@ -55,19 +43,19 @@ function TTYPlayer () {
         };
     };
 
+    var reset_margins = function() {
+        margins = {
+            top: 1,
+            bottom: HEIGHT
+        };
+    };
+
     var reset_rendition = function () {
         rendition = {
             foreground: 'white',
             background: 'black',
             light: '',
             negative: false
-        };
-    };
-
-    var reset_margins = function() {
-        margins = {
-            top: 1,
-            bottom: HEIGHT
         };
     };
 
@@ -101,19 +89,6 @@ function TTYPlayer () {
                 substring = string.slice(0, index);
                 string = string.slice(index);
             }
-
-            var pre = '<span class="';
-            if (rendition.negative == false) {
-                pre += rendition.light + rendition.foreground + '-fg ' +
-                    rendition.background + '-bg"';
-            }
-            else {
-                pre += rendition.light + rendition.foreground + '-bg ' +
-                    rendition.background + '-fg"';
-            }
-            pre += '>';
-
-            var post = '</span>';
 
             var j = 0;
 
@@ -202,7 +177,20 @@ function TTYPlayer () {
                         character = '&nbsp;';
                     }
 
-                    buffer[cursor.y - 1][cursor.x - 1] = pre + character + post;
+                    var cell = {};
+
+                    var properties = Object.keys(rendition);
+                    for (var q = 0, ql = properties.length; q < ql; q++) {
+                        var pq = properties[q];
+                        cell[pq] = rendition[pq];
+                    }
+
+                    cell.character = character;
+
+                    buffer[cursor.y - 1][cursor.x - 1] = cell;
+
+
+                    debugger;
 
                     if (update_lines['-1'] == undefined &&
                         update_lines[cursor.y] == undefined) {
