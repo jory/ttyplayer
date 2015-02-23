@@ -16,7 +16,7 @@ var parseLongAt = function(DOMString, offset) {
     return long;
 };
 
-module.exports = function (file, cb) {
+module.exports = function(file, cb) {
     var ttyrec = {};
     ttyrec.positions = [];
 
