@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/jory/ttyplayer/issues"
   },
-  "homepage": "https://github.com/jory/ttyplayer"
+  "homepage": "https://github.com/jory/ttyplayer",
+  "dependencies": {
+    "file-api": "^0.10.4"
+  }
 }
