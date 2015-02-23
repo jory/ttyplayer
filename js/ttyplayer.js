@@ -189,9 +189,6 @@ function TTYPlayer () {
 
                     buffer[cursor.y - 1][cursor.x - 1] = cell;
 
-
-                    debugger;
-
                     if (update_lines['-1'] == undefined &&
                         update_lines[cursor.y] == undefined) {
                         update_chars[cursor.y + '_' + cursor.x] = true;
@@ -831,41 +828,3 @@ function TTYPlayer () {
         get_ttyrec: get_ttyrec
     };
 };
-
-$().ready(function() {
-    var p = TTYPlayer();
-
-    $("#file").bind('change', function(evt) {
-        var file = evt.target.files[0];
-
-        p.parse_data(file);
-
-        $("#play").attr("disabled", "");
-        $("#pause").attr("disabled", "t");
-        $("#reset").attr("disabled", "");
-    });
-
-    $("#play").click(function() {
-        p.play_data();
-    });
-
-    $("#pause").click(function(){
-        p.stop_data();
-    });
-
-    $("#reset").click(function() {
-        p.reset_buffer();
-        p.should_print = true;
-        p.print_frame();
-    });
-
-    $('html').keydown(function(event) {
-        if (event.keyCode == '39') {
-            p.next_frame();
-            p.print_frame();
-        }
-        else if  (event.keyCode == '32') {
-            p.stop_data();
-        }
-    });
-});
