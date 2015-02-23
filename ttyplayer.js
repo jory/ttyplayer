@@ -4,6 +4,9 @@ module.exports = function TTYPlayer (file) {
 
     fileParser(file, function (ttyrec) {
         console.log(Object.keys(ttyrec));
+        // Here we have the binary version...
+
+        debugger;
     });
 
     // A player is a stateful object.
