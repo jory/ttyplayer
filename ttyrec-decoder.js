@@ -10,55 +10,35 @@ module.exports = function (parsed, callback) {
     var ttyrec = {};
     ttyrec.frames = [];
 
-    var index = -1;
-
     // State variables
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
 
-    var decode_frames =  function (cb) {
-        if (index < parsed.positions.length) {
+    reset_buffer();
 
-            index += 1;
-            var current = parsed.positions[index];
+    for (var i = 0, il = parsed.positions.length; i < il; i++) {
+        var current = parsed.positions[i];
+        render_frame(parsed.blob.slice(current.start, current.end));
+        // ttyrec.frames[index] = Hoek.clone(buffer);
 
-            render_frame(parsed.blob.slice(current.start, current.end));
-            ttyrec.frames[index] = Hoek.clone(buffer);
+        var next = parsed.positions[i + 1];
+        if (next) {
+            var millisec;
 
-            var next = parsed.positions[index + 1];
-            if (next) {
-                var millisec;
-
-                if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
-                else if (next.sec > current.sec) {
-                    millisec = ((next.sec - current.sec - 1) * 1000 +
-                                ((1000000 - current.usec) + next.usec)/1000);
-                }
-                else {
-                    console.error('Frame ' + (index + 1) +
-                                  'reports an earlier time than frame ' + index);
-                    millisec = 0;
-                }
-
-                ////////////////////////////////////
-                // NOTE: The wait should account for the maximal amount of
-                // time it takes to draw the frame.
-                ////////////////////////////////////
-
-                // console.log(millisec);
-
-                ////////////////////////////////////
-                // NOTE: Remove the following line!
-                ////////////////////////////////////
+            if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
+            else if (next.sec > current.sec) {
+                millisec = ((next.sec - current.sec - 1) * 1000 +
+                            ((1000000 - current.usec) + next.usec)/1000);
+            }
+            else {
+                console.error('Frame ' + (index + 1) +
+                              'reports an earlier time than frame ' + index);
                 millisec = 0;
-                ////////////////////////////////////
-
-                decode_frames(cb);
-            } else {
-                cb(null, ttyrec);
             }
         }
-    };
+    }
+
+    callback(null, ttyrec);
 
     var reset_buffer = function() {
         index = -1;
@@ -208,7 +188,7 @@ module.exports = function (parsed, callback) {
                     }
                 }
                 else {
-                    buffer[cursor.y - 1][cursor.x - 1] = Hoek.merge({char: character}, rendition);
+                    buffer[cursor.y - 1][cursor.x - 1] = character; // Hoek.merge({char: character}, rendition);
 
                     if (update_lines['-1'] == undefined &&
                         update_lines[cursor.y] == undefined) {
@@ -626,7 +606,7 @@ module.exports = function (parsed, callback) {
         string = string.replace(/\x0e/g, '');
 
         if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = Hoek.merge({char: ' '}, rendition);
+            buffer[cursor.y - 1][cursor.x - 1] = ' '; // Hoek.merge({char: ' '}, rendition);
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
 
@@ -652,14 +632,8 @@ module.exports = function (parsed, callback) {
         }
 
         if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = Hoek.merge({char: '_'}, rendition);
+            buffer[cursor.y - 1][cursor.x - 1] = '_'; // Hoek.merge({char: '_'}, rendition);
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
     };
-
-    reset_buffer();
-
-    return decode_frames(function (err, ttyrec) {
-        callback(null, ttyrec);
-    });
 };
