@@ -14,32 +14,6 @@ module.exports = function (parsed, callback) {
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
 
-    reset_buffer();
-
-    for (var i = 0, il = parsed.positions.length; i < il; i++) {
-        var current = parsed.positions[i];
-        render_frame(parsed.blob.slice(current.start, current.end));
-        // ttyrec.frames[index] = Hoek.clone(buffer);
-
-        var next = parsed.positions[i + 1];
-        if (next) {
-            var millisec;
-
-            if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
-            else if (next.sec > current.sec) {
-                millisec = ((next.sec - current.sec - 1) * 1000 +
-                            ((1000000 - current.usec) + next.usec)/1000);
-            }
-            else {
-                console.error('Frame ' + (index + 1) +
-                              'reports an earlier time than frame ' + index);
-                millisec = 0;
-            }
-        }
-    }
-
-    callback(null, ttyrec);
-
     var reset_buffer = function() {
         index = -1;
         buffer = [[]];
@@ -79,8 +53,6 @@ module.exports = function (parsed, callback) {
             negative: false
         };
     };
-
-    //////////////////////////////////////////
 
     var render_frame = function (string) {
 
@@ -636,4 +608,30 @@ module.exports = function (parsed, callback) {
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
     };
+
+    reset_buffer();
+
+    for (var i = 0, il = parsed.positions.length; i < il; i++) {
+        var current = parsed.positions[i];
+        render_frame(parsed.blob.slice(current.start, current.end));
+        // ttyrec.frames[index] = Hoek.clone(buffer);
+
+        var next = parsed.positions[i + 1];
+        if (next) {
+            var millisec;
+
+            if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
+            else if (next.sec > current.sec) {
+                millisec = ((next.sec - current.sec - 1) * 1000 +
+                            ((1000000 - current.usec) + next.usec)/1000);
+            }
+            else {
+                console.error('Frame ' + (index + 1) +
+                              'reports an earlier time than frame ' + index);
+                millisec = 0;
+            }
+        }
+    }
+
+    callback(null, ttyrec);
 };
