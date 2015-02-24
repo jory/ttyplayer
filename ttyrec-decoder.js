@@ -160,7 +160,7 @@ module.exports = function (parsed, callback) {
                     }
                 }
                 else {
-                    buffer[cursor.y - 1][cursor.x - 1] = Hoek.merge({char: character}, rendition);
+                    buffer[cursor.y - 1][cursor.x - 1] = character; // Hoek.merge({char: character}, rendition);
 
                     if (update_lines['-1'] == undefined &&
                         update_lines[cursor.y] == undefined) {
@@ -578,7 +578,7 @@ module.exports = function (parsed, callback) {
         string = string.replace(/\x0e/g, '');
 
         if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = Hoek.merge({char: ' '}, rendition);
+            buffer[cursor.y - 1][cursor.x - 1] = ' '; // Hoek.merge({char: ' '}, rendition);
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
 
@@ -604,7 +604,7 @@ module.exports = function (parsed, callback) {
         }
 
         if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = Hoek.merge({char: '_'}, rendition);
+            buffer[cursor.y - 1][cursor.x - 1] = '_'; // Hoek.merge({char: '_'}, rendition);
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
     };
@@ -614,7 +614,7 @@ module.exports = function (parsed, callback) {
     for (var i = 0, il = parsed.positions.length; i < il; i++) {
         var current = parsed.positions[i];
         render_frame(parsed.blob.slice(current.start, current.end));
-        ttyrec.frames[index] = Hoek.clone(buffer);
+        // ttyrec.frames[index] = Hoek.clone(buffer);
 
         var next = parsed.positions[i + 1];
         if (next) {
