@@ -4,7 +4,7 @@ var Hoek = require('hoek');
 var HEIGHT = 24;
 var WIDTH = 80;
 
-module.exports = function (parsed) {
+module.exports = function (parsed, callback) {
     // Now we need to run through the parsed file and generate the frameset.
 
     var ttyrec = {};
@@ -15,6 +15,51 @@ module.exports = function (parsed) {
     // State variables
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
+
+    var decode_frames =  function (cb) {
+        if (index < parsed.positions.length) {
+
+            index += 1;
+            var current = parsed.positions[index];
+
+            render_frame(parsed.blob.slice(current.start, current.end));
+            ttyrec.frames[index] = Hoek.clone(buffer);
+
+            var next = parsed.positions[index + 1];
+            if (next) {
+                var millisec;
+
+                if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
+                else if (next.sec > current.sec) {
+                    millisec = ((next.sec - current.sec - 1) * 1000 +
+                                ((1000000 - current.usec) + next.usec)/1000);
+                }
+                else {
+                    console.error('Frame ' + (index + 1) +
+                                  'reports an earlier time than frame ' + index);
+                    millisec = 0;
+                }
+
+                ////////////////////////////////////
+                // NOTE: The wait should account for the maximal amount of
+                // time it takes to draw the frame.
+                ////////////////////////////////////
+
+                // console.log(millisec);
+
+                ////////////////////////////////////
+                // NOTE: Remove the following line!
+                ////////////////////////////////////
+                millisec = 0;
+                ////////////////////////////////////
+
+                decode_frames(cb);
+            } else {
+                debugger;
+                cb(null, ttyrec);
+            }
+        }
+    };
 
     var reset_buffer = function() {
         index = -1;
@@ -59,6 +104,7 @@ module.exports = function (parsed) {
     //////////////////////////////////////////
 
     var render_frame = function (string) {
+
         string = pre_pend + string;
         pre_pend = '';
 
@@ -79,13 +125,16 @@ module.exports = function (parsed) {
 
             var j = 0;
 
-            for (var i in substring) {
-                i = parseInt(i);
+            for (var i = 0, il = substring.length; i < il; i++) {
 
                 if (i + j + 1 > substring.length) {
                     break;
                 }
+
                 var character = substring[i + j];
+
+                if (! character) { debugger };
+
                 var code = character.charCodeAt(0);
 
                 if (code < 32) {
@@ -609,57 +658,10 @@ module.exports = function (parsed) {
         }
     };
 
-    var next_frame =  function() {
-        if (index < parsed.positions.length) {
+    reset_buffer();
 
-            index += 1;
-            var current = parsed.positions[index];
-
-            render_frame(parsed.blob.slice(current.start, current.end));
-
-            print_frame();
-
-            var next = parsed.positions[index + 1];
-            if (next) {
-                var millisec;
-                if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
-                else if (next.sec > current.sec) {
-                    millisec = ((next.sec - current.sec - 1) * 1000 +
-                                ((1000000 - current.usec) + next.usec)/1000);
-                }
-                else {
-                    console.error('Frame ' + (index + 1) +
-                                  'reports an earlier time than frame ' + index);
-                    millisec = 0;
-                }
-
-                ////////////////////////////////////
-                // NOTE: The wait should account for the maximal amount of
-                // time it takes to draw the frame.
-                ////////////////////////////////////
-
-                // console.log(millisec);
-
-                ////////////////////////////////////
-                // NOTE: Remove the following line!
-                ////////////////////////////////////
-                millisec = 0;
-                ////////////////////////////////////
-
-                timeout = window.setTimeout(next_frame, millisec);
-            }
-        }
-    };
-
-    var goto_frame = function(n) {
-        if (n < 0 || n >= parsed.positions.length) return;
-
-        if (n < index) {
-            reset_buffer();
-        }
-
-        while (index < n) {
-            next_frame();
-        }
-    };
+    return decode_frames(function (ttyrec) {
+        debugger;
+        callback(null, ttyrec);
+    });
 };
