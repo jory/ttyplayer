@@ -56,14 +56,24 @@ module.exports = function (parsed, callback) {
         rendition = {
             foreground: 'white',
             background: 'black',
-            light: '',
+            light: false,
             negative: false
         };
     };
 
+    var capitalize = function(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    };
+
     var store_character = function(char) {
-        var background = rendition.light + rendition.background;
-        var foreground = rendition.light + rendition.foreground;
+
+        var background = rendition.background;
+        var foreground = rendition.foreground;
+
+        if (rendition.light) {
+            background = 'bright' + capitalize(background);
+            foreground = 'bright' + capitalize(foreground);
+        }
 
         return {
             char: char,
@@ -429,7 +439,7 @@ module.exports = function (parsed, callback) {
                             reset_rendition();
                         }
                         else if (val == 1) {
-                            rendition.light = 'light-';
+                            rendition.light = true;
                         }
                         else if (val == 5) {
                             // Blink.
