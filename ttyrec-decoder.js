@@ -22,7 +22,6 @@ module.exports = function (parsed, callback) {
         reset_rendition();
 
         buffer = new Array(HEIGHT);
-
         for (var i = 0; i < HEIGHT; i++) {
             buffer[i] = new Array(WIDTH);
             for (var j = 0; j < WIDTH; j++) {
