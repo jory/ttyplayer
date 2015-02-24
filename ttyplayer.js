@@ -7,27 +7,28 @@ module.exports = function (file) {
             console.log(Object.keys(ttyrec));
             console.log(ttyrec.frames.length);
 
-            var index = 420;
-            var frame = ttyrec.frames[index];
+            for (var p = 0, pl = ttyrec.frames.length; p < pl; p++) {
+                var frame = ttyrec.frames[p];
 
-            var string = "";
+                var string = "";
 
-            for (var i = 0, il = frame.length; i < il; i++) {
-                var row = frame[i];
-                for (var j = 0, jl = row.length; j < jl; j++) {
-                    var char = row[j];
-                    if (typeof char === "number") {
-                        string += ttyrec.frames[char][i][j].char;
-                    } else if (typeof char === "object"){
-                        string += char.char;
-                    } else {
-                        console.warn("MAJOR UHOH");
+                for (var i = 0, il = frame.length; i < il; i++) {
+                    var row = frame[i];
+                    for (var j = 0, jl = row.length; j < jl; j++) {
+                        var char = row[j];
+                        if (typeof char === "number") {
+                            string += ttyrec.frames[char][i][j].char;
+                        } else if (typeof char === "object"){
+                            string += char.char;
+                        } else {
+                            console.warn("MAJOR UHOH");
+                        }
                     }
+                    string += "\n";
                 }
-                string += "\n";
-            }
 
-            console.log(string);
+                console.log(string);
+            }
         });
     });
 };
