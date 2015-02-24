@@ -5,8 +5,6 @@ var HEIGHT = 24;
 var WIDTH = 80;
 
 module.exports = function (parsed, callback) {
-    // Now we need to run through the parsed file and generate the frameset.
-
     var ttyrec = {};
     ttyrec.frames = [];
 
@@ -51,6 +49,17 @@ module.exports = function (parsed, callback) {
             background: 'black',
             light: '',
             negative: false
+        };
+    };
+
+    var store_character = function(char) {
+        var background = rendition.light + rendition.background;
+        var foreground = rendition.light + rendition.foreground;
+
+        return {
+            char: char,
+            foreground: rendition.negative ? background : foreground,
+            background: rendition.negative ? foreground : background
         };
     };
 
@@ -160,7 +169,7 @@ module.exports = function (parsed, callback) {
                     }
                 }
                 else {
-                    buffer[cursor.y - 1][cursor.x - 1] = character; // Hoek.merge({char: character}, rendition);
+                    buffer[cursor.y - 1][cursor.x - 1] = store_character(character);
 
                     if (update_lines['-1'] == undefined &&
                         update_lines[cursor.y] == undefined) {
@@ -578,7 +587,7 @@ module.exports = function (parsed, callback) {
         string = string.replace(/\x0e/g, '');
 
         if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = ' '; // Hoek.merge({char: ' '}, rendition);
+            buffer[cursor.y - 1][cursor.x - 1] = store_character(' ');
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
 
@@ -604,7 +613,7 @@ module.exports = function (parsed, callback) {
         }
 
         if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = '_'; // Hoek.merge({char: '_'}, rendition);
+            buffer[cursor.y - 1][cursor.x - 1] = store_character('_');
             update_chars[cursor.y + '_' + cursor.x] = true;
         }
     };
@@ -613,8 +622,12 @@ module.exports = function (parsed, callback) {
 
     for (var i = 0, il = parsed.positions.length; i < il; i++) {
         var current = parsed.positions[i];
+
         render_frame(parsed.blob.slice(current.start, current.end));
-        // ttyrec.frames[index] = Hoek.clone(buffer);
+
+        var frame = [];
+        Hoek.merge(frame, buffer);
+        ttyrec.frames[i] = frame;
 
         var next = parsed.positions[i + 1];
         if (next) {
