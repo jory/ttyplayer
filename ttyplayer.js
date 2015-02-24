@@ -4,7 +4,8 @@ var ttyrecDecoder = require('./ttyrec-decoder');
 module.exports = function (file) {
     fileParser(file, function (err, parsed) {
         ttyrecDecoder(parsed, function (err, ttyrec) {
-            console.log(ttyrec.frames[42]);
+            console.log(Object.keys(ttyrec));
+            console.log(ttyrec.frames.length);
         });
     });
 };
