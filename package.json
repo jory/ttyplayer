@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/jory/ttyplayer",
   "dependencies": {
-    "file-api": "^0.10.4"
+    "colors": "^1.0.3",
+    "file-api": "^0.10.4",
+    "hoek": "^2.11.0"
   }
 }

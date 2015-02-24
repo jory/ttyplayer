@@ -44,7 +44,7 @@ module.exports = function(file, cb) {
             offset += length;
         }
 
-        cb(ttyrec);
+        cb(null, ttyrec);
     };
 
     var reader = new FileReader();
