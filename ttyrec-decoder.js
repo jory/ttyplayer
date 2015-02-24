@@ -55,7 +55,6 @@ module.exports = function (parsed, callback) {
 
                 decode_frames(cb);
             } else {
-                debugger;
                 cb(null, ttyrec);
             }
         }
@@ -660,8 +659,7 @@ module.exports = function (parsed, callback) {
 
     reset_buffer();
 
-    return decode_frames(function (ttyrec) {
-        debugger;
+    return decode_frames(function (err, ttyrec) {
         callback(null, ttyrec);
     });
 };
