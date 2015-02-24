@@ -8,17 +8,27 @@ module.exports = function (parsed, callback) {
     var ttyrec = {};
     ttyrec.frames = [];
 
+    var numFrames = 0;
+
     // State variables
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
 
     var reset_buffer = function() {
-        index = -1;
-        buffer = [[]];
+        // index = -1;  // Hmm... not entirely sure how that relates to the 'i' I was previously calling 'index'
 
         reset_cursor();
         reset_margins();
         reset_rendition();
+
+        buffer = new Array(HEIGHT);
+
+        for (var i = 0; i < HEIGHT; i++) {
+            buffer[i] = new Array(WIDTH);
+            for (var j = 0; j < WIDTH; j++) {
+                buffer[i][j] = store_character(' ');
+            }
+        }
 
         pre_pend = '';
 
@@ -618,17 +628,24 @@ module.exports = function (parsed, callback) {
         }
     };
 
-    var print_buffer = function () {
+    var store_buffer = function () {
 
-        var print_cell = function(i, j, q) {
+        var previousFrame = ttyrec.frames[numFrames];
 
-            var c = buffer[i - 1][j - 1];
-            if (c == undefined) {
-                c = '<span>&nbsp;</span>';
+        var newFrame = [];
+        for (var i = 0; i < HEIGHT; i++) {
+            newFrame[i] = new Array(WIDTH);
+            for (var j = 0; j < WIDTH; j++) {
+                var prev = previousFrame[i][j];
+                if (typeof prev === "object") {
+                    newFrame[i][j] = numFrames;
+                } else if (typeof prev === "number"){
+                    newFrame[i][j] = prev;
+                } else {
+                    console.warn("UHOH!");
+                }
             }
-
-            cells[q].html(c);
-        };
+        }
 
         if (update_lines['-1']) {
             update_chars = {};
@@ -638,55 +655,53 @@ module.exports = function (parsed, callback) {
             for (var n = 1; n <= m; n++) {
                 update_lines[n] = true;
             }
-
-            for (var i = 1; i + m <= HEIGHT; i++) {
-                for (var j = 1; j <= WIDTH; j++) {
-                    cells[(i + m) + '_' + j].html('<span>&nbsp;</span>');
-                }
-            }
         }
 
         for (var point in update_chars) {
             var points = point.split('_');
-            var i = points[0];
+            var x = parseInt(points[0]) - 1;
+            var y = parseInt(points[1]) - 1;
 
             // Skip any character that will be covered by a line printing.
-            if (update_lines[i]) {
+            if (update_lines[x]) {
                 continue;
             }
 
-            print_cell(parseInt(i), parseInt(points[1]), point);
+            var char = buffer[x][y];
+            if (char === undefined) char = store_character(' ');
+            newFrame[x][y] = char;
         }
 
         for (var line in update_lines) {
-            var i = parseInt(line);
-
-            for (var j = 1; j <= WIDTH; j++) {
-                print_cell(i, j, line + '_' + j);
+            var i = parseInt(line) - 1;
+            for (var j = 0; j < WIDTH; j++) {
+                var char = buffer[i][j];
+                if (char === undefined) char = store_character(' ');
+                newFrame[i][j] = char;
             }
         }
 
         update_chars = {};
         update_lines = {};
+
+        ttyrec.frames[++numFrames] = newFrame;
     };
 
-    var print_frame = function(i) {
+    var store_frame = function() {
         if (should_print) {
-            print_buffer();
+            store_buffer();
             should_print = false;
         }
     };
 
     reset_buffer();
+    ttyrec.frames[0] = Hoek.clone(buffer);
 
     for (var i = 0, il = parsed.positions.length; i < il; i++) {
         var current = parsed.positions[i];
 
         render_frame(parsed.blob.slice(current.start, current.end));
-
-        var frame = [];
-        Hoek.merge(frame, buffer);
-        ttyrec.frames[i] = frame;
+        store_frame();
 
         var next = parsed.positions[i + 1];
         if (next) {
