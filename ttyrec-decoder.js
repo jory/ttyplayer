@@ -27,7 +27,7 @@ module.exports = function (parsed, callback) {
     };
 
     var copyBackwards = function(index) {
-        for (; index > 0; index--) {
+        for (; index >= 0; index--) {
             var row = buffer[index];
             for (var r = 0, rl = row.length; r < rl; r++) {
                 var atom = row[r];
