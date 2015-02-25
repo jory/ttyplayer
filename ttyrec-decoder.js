@@ -14,6 +14,29 @@ module.exports = function (parsed, callback) {
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
 
+    var copyForward = function(index) {
+        for (var bl = buffer.length; index < bl; index++) {
+            var row = buffer[index];
+            for (var r = 0, rl = row.length; r < rl; r++) {
+                var atom = row[r];
+                if (typeof atom === "number") {
+                    row[r] = buffer[atom][r];
+                }
+            }
+        }
+    };
+
+    var copyBackwards = function(index) {
+        for (; index > 0; index--) {
+            var row = buffer[index];
+            for (var r = 0, rl = row.length; r < rl; r++) {
+                var atom = row[r];
+                if (typeof atom === "number") {
+                    row[r] = buffer[atom][r];
+                }
+            }
+        }
+    };
     var reset_buffer = function() {
         // index = -1;  // Hmm... not entirely sure how that relates to the 'i' I was previously calling 'index'
 
@@ -131,6 +154,9 @@ module.exports = function (parsed, callback) {
                     }
                     else if (code == 10) {
                         // LF
+
+                        copyForward(cursor.y);
+
                         buffer.splice(cursor.y, 0, []);
                         buffer.splice(margins.top - 1, 1);
 
@@ -168,6 +194,9 @@ module.exports = function (parsed, callback) {
                         }
                         else if (next == 'M') {
                             // Reverse LF
+
+                            copyBackwards(cursor.y - 1);
+
                             buffer.splice(cursor.y - 1, 0, []);
                             buffer.splice(margins.bottom, 1);
 
