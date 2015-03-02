@@ -1,8 +1,5 @@
 var util = require('util');
 
-var ansi = require('ansi'),
-    cursor = ansi(process.stdout);
-
 var keypress = require('keypress');
 keypress(process.stdin);
 
@@ -18,6 +15,7 @@ module.exports = function (file) {
 
                 console.log("~> ", index);
 
+                var out = [];
                 var frame = ttyrec.frames[index];
                 for (var i = 0, il = frame.length; i < il; i++) {
                     var row = frame[i];
@@ -26,13 +24,12 @@ module.exports = function (file) {
                         if (typeof char === "number") {
                             char = ttyrec.frames[char][i][j];
                         }
-                        cursor[char.foreground]();
-                        cursor.bg[char.background]();
-                        cursor.write(char.char);
-                        cursor.reset();
+                        out.push(char.char);
                     }
-                    cursor.write("\n");
+                    out.push("\n");
                 }
+
+                console.log(out.join(''));
             };
 
 
