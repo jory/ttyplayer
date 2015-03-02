@@ -767,7 +767,7 @@ module.exports = function (parsed, callback) {
             var y = parseInt(points[1]) - 1;
 
             // Skip any character that will be covered by a line printing.
-            if (update_lines[x]) {
+            if (update_lines[points[0]]) {
                 continue;
             }
 
