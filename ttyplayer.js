@@ -1,8 +1,5 @@
 var util = require('util');
 
-var keypress = require('keypress');
-keypress(process.stdin);
-
 var fileParser = require('./file-parser');
 var ttyrecDecoder = require('./ttyrec-decoder');
 
@@ -12,8 +9,6 @@ module.exports = function (file) {
 
             var printFrame = function (index) {
                 console.log('\u001B[2J\u001B[0;0f');
-
-                console.log("~> ", index);
 
                 var out = [];
                 var frame = ttyrec.frames[index];
@@ -35,17 +30,12 @@ module.exports = function (file) {
 
             var index = 0;
 
-            process.stdin.on('keypress', function (ch, key) {
-                console.log('got "keypress"', key);
-                if (key && key.ctrl && key.name == 'c') {
-                    process.stdin.pause();
-                } else {
-                    printFrame(index++);
-                }
-            });
+            var blugh = function () {
+                printFrame(index++);
+                setTimeout(blugh, 100);
+            };
 
-            process.stdin.setRawMode(true);
-            process.stdin.resume();
+            blugh();
         });
     });
 };
