@@ -10,8 +10,8 @@ module.exports = function (parsed, callback) {
 
     var numFrames = 0;
 
-    var shouldPrint = function () {
-        return numFrames === 245;
+    var stringifyCursor = function () {
+        return "(" + cursor.y + ", " + cursor.x + ")";
     };
 
     var printFrame = function (index) {
@@ -177,8 +177,6 @@ module.exports = function (parsed, callback) {
                 if (code < 32) {
                     if (code == 8) {
                         // Backspace
-                        if (shouldPrint()) console.log("Backspace");
-
                         if (cursor.show) {
                             buffer[cursor.y - 1][cursor.x - 1] = undefined;
 
@@ -191,8 +189,6 @@ module.exports = function (parsed, callback) {
                     }
                     else if (code == 10) {
                         // LF
-                        if (shouldPrint()) console.log("LF");
-
                         copyForward(cursor.y);
 
                         buffer.splice(cursor.y, 0, []);
@@ -206,8 +202,6 @@ module.exports = function (parsed, callback) {
                     }
                     else if (code == 13) {
                         // CR
-                        if (shouldPrint()) console.log("CR");
-
                         cursor.x = 1;
                         cursor.y++;
 
@@ -234,8 +228,6 @@ module.exports = function (parsed, callback) {
                         }
                         else if (next == 'M') {
                             // Reverse LF
-                            if (shouldPrint()) console.log("Reverse LF");
-
                             copyForward(cursor.y - 1);
 
                             // Putting a line in before the cursor, so
@@ -262,8 +254,6 @@ module.exports = function (parsed, callback) {
                     }
                 }
                 else {
-                    if (shouldPrint()) console.log(character);
-
                     buffer[cursor.y - 1][cursor.x - 1] = store_character(character);
 
                     if (update_lines['-1'] == undefined &&
@@ -599,13 +589,6 @@ module.exports = function (parsed, callback) {
             var value = match[1];
             var n = parseInt(value);
 
-            if (shouldPrint() && c !== 'm') {
-                console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-                printBuffer();
-                console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-                console.log(c, value, "(" + cursor.y + ", " + cursor.x + ")");
-            }
-
             if (c == 'A') {
                 cursor_up(n);
             }
@@ -789,14 +772,6 @@ module.exports = function (parsed, callback) {
         update_lines = {};
 
         ttyrec.frames[++numFrames] = newFrame;
-
-        if (numFrames === 245 || numFrames === 246) {
-            console.log("((((((((((((((((((((((((((((((((((((((((((");
-            printBuffer();
-            console.log("))))))))))))))))))))))))))))))))))))))))))");
-            printFrame(numFrames);
-            debugger;
-        }
     };
 
     var store_frame = function() {
