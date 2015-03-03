@@ -188,13 +188,10 @@ TTYDecoder.prototype.eraseData = function (n) {
             for (i = 1; i < this.y; i++) {
                 this.updateLines[i] = true;
             }
-
-            if (this.updateLines[this.y] == undefined) {
-                for (j = 1; j <= this.x; j++) {
-                    this.updateChars[this.y + '_' + j] = true;
-                }
-            }
         }
+
+        this.dirtifyLine(1, this.x);
+
     } else if (n == 2) {
         this.buffer = [[]];
 
@@ -223,12 +220,8 @@ TTYDecoder.prototype.eraseInLine = function (n) {
             this.buffer[this.y - 1][i] = undefined;
         }
 
-        if (this.updateLines['-1'] == undefined &&
-            this.updateLines[this.y] == undefined) {
-            for (j = 1; j <= this.x; j++) {
-                this.updateChars[this.y + '_' + j] = true;
-            }
-        }
+        this.dirtifyLine(1, this.x);
+
     } else if (n == 2) {
         this.buffer[this.y - 1] = [];
 
