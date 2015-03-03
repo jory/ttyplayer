@@ -175,10 +175,7 @@ TTYDecoder.prototype.eraseData = function (n) {
         }
         this.dirtyLines(1, this.y - 1);
 
-        for (var j = 0, jl = this.x; j < jl; j++) {
-            this.buffer[this.y - 1][j] = undefined;
-        }
-        this.dirtyInline(1, this.x);
+        this.wipeInline();
 
     } else if (n == 2) {
         this.buffer = [[]];
@@ -202,16 +199,20 @@ TTYDecoder.prototype.eraseInLine = function (n) {
         this.buffer[this.y - 1].splice(this.x - 1);
         this.dirtyInline(this.x, WIDTH);
     } else if (n == 1) {
-        for (var i = 0; i < this.x; i++) {
-            this.buffer[this.y - 1][i] = undefined;
-        }
-        this.dirtyInline(1, this.x);
+        this.wipeInline();
     } else if (n == 2) {
         this.buffer[this.y - 1] = [];
         this.dirtyLines(this.y);
     } else {
         console.error('Undefined behaviour for eraseInLine.');
     }
+};
+
+TTYDecoder.prototype.wipeInline = function () {
+    for (var i = 0, il = this.x; i < il; i++) {
+        this.buffer[this.y - 1][i] = undefined;
+    }
+    this.dirtyInline(1, this.x);
 };
 
 TTYDecoder.prototype.eraseCharacters = function (n) {
