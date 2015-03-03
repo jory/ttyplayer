@@ -10,54 +10,6 @@ module.exports = function (parsed, callback) {
 
     var numFrames = 0;
 
-    var stringifyCursor = function () {
-        return "(" + cursor.y + ", " + cursor.x + ")";
-    };
-
-    var printFrame = function (index) {
-        console.log("~> ", index);
-
-        var out = [];
-        var frame = ttyrec.frames[index];
-
-        for (var i = 0, il = frame.length; i < il; i++) {
-            var row = frame[i];
-            for (var j = 0, jl = row.length; j < jl; j++) {
-                var char = row[j];
-                if (typeof char === "number") {
-                    char = ttyrec.frames[char][i][j];
-                }
-                out.push(char.char);
-            }
-            out.push("\n");
-        }
-
-        console.log(out.join(''));
-    };
-
-    var printBuffer = function () {
-        var out = [];
-
-        for (var i = 0, il = buffer.length; i < il; i++) {
-            var row = buffer[i];
-            for (var j = 0, jl = row.length; j < jl; j++) {
-                var char = row[j];
-                if (typeof char === "number") {
-                    char = ttyrec.frames[char][i][j];
-                } else if (typeof char === "object") {
-                    char = char.char;
-                } else {
-                    char = ' ';
-                }
-                out.push(char);
-            }
-            out.push("\n");
-        }
-
-        console.log(out.join(''));
-    };
-
-
     // State variables
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
