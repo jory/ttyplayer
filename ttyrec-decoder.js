@@ -4,6 +4,9 @@ var Hoek = require('hoek');
 var HEIGHT = 24;
 var WIDTH = 80;
 
+var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
+var partRegexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
+
 module.exports = function (parsed, callback) {
     var store_buffer = function () {
 
@@ -402,6 +405,7 @@ TTYDecoder.prototype.selectGraphicRendition = function (value) {
                 break;
             default:
                 if ((val >= 30 && val <= 37) || (val >= 40 && val <= 47)) {
+
                     var background = false;
                     if ((val - 39) > 0) {
                         background = true;
@@ -449,260 +453,208 @@ TTYDecoder.prototype.setMargins = function (value) {
     this.marginBottom = bottom;
 };
 
-TTYDecoder.prototype.render_frame = function (string) {
+TTYDecoder.prototype.renderFrame = function (string) {
 
-        string = pre_pend + string;
-        pre_pend = '';
+    this.string = this.prepend + string;
+    this.prepend = '';
 
-        var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
-        var part_regexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
+    // Remove shift-in and shift-out, as I have no idea what to do with them.
+    string = string.replace(/\x0f/g, '');
+    string = string.replace(/\x0e/g, '');
 
-        var output_characters = function (index) {
-            var substring = '';
+    if (cursor.show) {
+        buffer[cursor.y - 1][cursor.x - 1] = store_character(' ');
+        update_chars[cursor.y + '_' + cursor.x] = true;
+    }
 
-            if (index == -1) {
-                substring = string;
+    while (string != '') {
+        var i = string.search(regexp);
+
+        if (i == -1) {
+            // Have to see if the last few characters are a code that's been cut-off.
+            if (string.search(partRegexp) != -1) {
+                pre_pend = string;
                 string = '';
             }
             else {
-                substring = string.slice(0, index);
-                string = string.slice(index);
-            }
-
-            var j = 0;
-
-            for (var i = 0, il = substring.length; i < il; i++) {
-
-                if (i + j + 1 > substring.length) {
-                    break;
-                }
-
-                var character = substring[i + j];
-
-                if (! character) { debugger };
-
-                var code = character.charCodeAt(0);
-
-                if (code < 32) {
-                    if (code == 8) {
-                        // Backspace
-                        if (cursor.show) {
-                            buffer[cursor.y - 1][cursor.x - 1] = undefined;
-
-                            if (update_lines['-1'] == undefined &&
-                                update_lines[cursor.y] == undefined) {
-                                update_chars[cursor.y + '_' + cursor.x] = true;
-                            }
-                        }
-                        cursor.x--;
-                    }
-                    else if (code == 10) {
-                        // LF
-                        buffer.splice(cursor.y, 0, []);
-                        buffer.splice(margins.top - 1, 1);
-
-                        if (update_lines['-1'] == undefined) {
-                            for (var k = margins.top; k <= cursor.y; k++) {
-                                update_lines[k] = true;
-                            }
-                        }
-                    }
-                    else if (code == 13) {
-                        // CR
-                        cursor.x = 1;
-                        cursor.y++;
-
-                        if (cursor.y > HEIGHT) {
-                            cursor.y = HEIGHT;
-                        }
-
-                        if (buffer[cursor.y - 1] == undefined) {
-                            buffer[cursor.y - 1] = [];
-                        }
-
-                        update_lines[cursor.y] = true;
-                    }
-                    else if (code == 27) {
-                        // ESC
-                        var next = substring[i + j + 1];
-                        if (next == '7') {
-                            console.log('save_cursor');
-                            j++;
-                        }
-                        else if (next == '8') {
-                            console.log('restore_cursor');
-                            j++;
-                        }
-                        else if (next == 'M') {
-                            // Reverse LF
-                            buffer.splice(cursor.y - 1, 0, []);
-                            buffer.splice(margins.bottom, 1);
-
-                            if (update_lines['-1'] == undefined) {
-                                for (var k = cursor.y; k <= margins.bottom; k++) {
-                                    update_lines[k] = true;
-                                }
-                            }
-
-                            j++;
-                        }
-                        else {
-                            console.error('Unhandled ESC followed by: ' + next);
-                        }
-                    }
-                    else {
-                        console.error('Unhandled non-printing character, code: ' + code);
-                    }
-                }
-                else {
-                    buffer[cursor.y - 1][cursor.x - 1] = store_character(character);
-
-                    if (update_lines['-1'] == undefined &&
-                        update_lines[cursor.y] == undefined) {
-                        update_chars[cursor.y + '_' + cursor.x] = true;
-                    }
-
-                    cursor.x++;
-                }
-            }
-
-            should_print = true;
-        };
-
-        var handle_esc = function() {
-
-            var match = string.match(regexp);
-            var c = match[2];
-            var value = match[1];
-            var n = parseInt(value);
-
-            if (c == 'A') {
-                cursor_up(n);
-            }
-            else if (c == 'B') {
-                cursor_down(n);
-            }
-            else if (c == 'C') {
-                cursor_forward(n);
-            }
-            else if (c == 'D') {
-                cursor_back(n);
-            }
-            else if (c == 'E') {
-                cursor_next_line(n);
-            }
-            else if (c == 'F') {
-                cursor_prev_line(n);
-            }
-            else if (c == 'G') {
-                cursor_horizontal_absolute(n);
-            }
-            else if (c == 'H') {
-                var x = 1;
-                var y = 1;
-                if (value != '') {
-                    var values = value.split(';');
-                    if (values[0] != '') y = parseInt(values[0]);
-                    if (values.length == 2) x = parseInt(values[1]);
-                }
-                cursor_position(y, x);
-            }
-            else if (c == 'J') {
-                erase_data(n);
-            }
-            else if (c == 'K') {
-                erase_in_line(n);
-            }
-            else if (c == 'L') {
-                insert_line(n);
-            }
-            else if (c == 'M') {
-                delete_line(n);
-            }
-            else if (c == 'P') {
-                delete_character(n);
-            }
-            else if (c == 'S') {
-                console.log('scroll_up');
-            }
-            else if (c == 'T') {
-                console.log('scroll_down');
-            }
-            else if (c == 'X') {
-                erase_characters(n);
-            }
-            else if (c == 'd') {
-                cursor_position(n, cursor.x);
-            }
-            else if (c == 'f') {
-                var x = 1;
-                var y = 1;
-                if (value != '') {
-                    var values = value.split(';');
-                    if (values[0] != '') y = parseInt(values[0]);
-                    if (values.length == 2) x = parseInt(values[1]);
-                }
-                cursor_position(y, x);
-            }
-            else if (c == 'h' && value == '?25') {
-                cursor.show = true;
-            }
-
-            else if (c == 'l' && value == '?25') {
-                cursor.show = false;
-                buffer[cursor.y - 1][cursor.x - 1] = undefined;
-                should_print = true;
-            }
-            else if (c == 'm') {
-                select_graphic_rendition(value);
-            }
-            else if (c == 'r') {
-                set_margins(value);
-            }
-            else {
-                console.error('Unhandled escape sequence: ' + match[0]);
-            }
-
-            string = string.slice(match[0].length);
-        };
-
-        // Remove shift-in and shift-out, as I have no idea what to do with them.
-        string = string.replace(/\x0f/g, '');
-        string = string.replace(/\x0e/g, '');
-
-        if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = store_character(' ');
-            update_chars[cursor.y + '_' + cursor.x] = true;
-        }
-
-        while (string != '') {
-            var i = string.search(regexp);
-
-            if (i == -1) {
-                // Have to see if the last few characters are a code that's been cut-off.
-                if (string.search(part_regexp) != -1) {
-                    pre_pend = string;
-                    string = '';
-                }
-                else {
-                    output_characters(i);
-                }
-            }
-            else if (i > 0) {
                 output_characters(i);
             }
-            else if (i == 0) {
-                handle_esc();
+        }
+        else if (i > 0) {
+            output_characters(i);
+        }
+        else if (i == 0) {
+            handle_esc();
+        }
+    }
+
+    if (cursor.show) {
+        buffer[cursor.y - 1][cursor.x - 1] = store_character('_');
+        update_chars[cursor.y + '_' + cursor.x] = true;
+    }
+};
+
+TTYDecoder.prototype.outputCharacters = function (index) {
+    var substring = '';
+
+    if (index == -1) {
+        substring = this.string;
+        this.string = '';
+    } else {
+        substring = this.string.slice(0, index);
+        this.string = this.string.slice(index);
+    }
+
+    for (var i = 0, j = 0, k = 0, il = substring.length; i < il; i++) {
+        if (i + j + 1 > substring.length) {
+            break;
+        }
+
+        var character = substring[i + j];
+
+        if (! character) { debugger };
+
+        var code = character.charCodeAt(0);
+
+        if (code < 32) {
+            if (code == 8) {
+                // Backspace
+                if (this.show) {
+                    this.buffer[this.y - 1][this.x - 1] = undefined;
+
+                    if (this.updateLines['-1'] == undefined &&
+                        this.updateLines[this.y] == undefined) {
+                        this.updateChars[this.y + '_' + this.x] = true;
+                    }
+                }
+                this.x--;
+
+            } else if (code == 10) {
+                // LF
+                this.buffer.splice(this.y, 0, []);
+                this.buffer.splice(this.marginTop - 1, 1);
+
+                if (this.updateLines['-1'] == undefined) {
+                    for (k = this.marginTop; k <= this.y; k++) {
+                        this.updateLines[k] = true;
+                    }
+                }
+
+            } else if (code == 13) {
+                // CR
+                this.x = 1;
+                this.y++;
+
+                if (this.y > HEIGHT) {
+                    this.y = HEIGHT;
+                }
+
+                if (this.buffer[this.y - 1] == undefined) {
+                    this.buffer[this.y - 1] = [];
+                }
+
+                this.updateLines[this.y] = true;
+
+            } else if (code == 27) {
+                // ESC
+                var next = substring[i + j + 1];
+                if (next == '7') {
+                    console.log('save_cursor');
+                    j++;
+                } else if (next == '8') {
+                    console.log('restore_cursor');
+                    j++;
+                } else if (next == 'M') {
+                    // Reverse LF
+                    this.buffer.splice(this.y - 1, 0, []);
+                    this.buffer.splice(this.marginBottom, 1);
+
+                    if (this.updateLines['-1'] == undefined) {
+                        for (k = this.y; k <= this.marginBottom; k++) {
+                            this.updateLines[k] = true;
+                        }
+                    }
+
+                    j++;
+                } else {
+                    console.error('Unhandled ESC followed by: ' + next);
+                }
+            } else {
+                console.error('Unhandled non-printing character, code: ' + code);
             }
+        } else {
+            this.buffer[this.y - 1][this.x - 1] = this.storeCharacter(character);
+
+            if (this.updateLines['-1'] == undefined &&
+                this.updateLines[this.y] == undefined) {
+                this.updateChars[this.y + '_' + this.x] = true;
+            }
+
+            this.x++;
         }
+    }
+    this.shouldPrint = true;
+};
 
-        if (cursor.show) {
-            buffer[cursor.y - 1][cursor.x - 1] = store_character('_');
-            update_chars[cursor.y + '_' + cursor.x] = true;
+TTYDecoder.prototype.handleEsc = function () {
+    var match = this.string.match(regexp);
+
+    var c = match[2];
+    var value = match[1];
+    var n = parseInt(value);
+
+    switch (c) {
+    case 'A': this.up(n); break;
+    case 'B': this.down(n); break;
+    case 'C': this.forward(n); break;
+    case 'D': this.back(n); break;
+    case 'E': this.nextLine(n); break;
+    case 'F': this.prevLine(n); break;
+    case 'G': this.horizontalAbsolute(n); break;
+    case 'J': this.eraseData(n); break;
+    case 'K': this.eraseInLine(n); break;
+    case 'L': this.insertLine(n); break;
+    case 'M': this.deleteLine(n); break;
+    case 'P': this.deleteCharacter(n); break;
+    case 'X': this.eraseCharacters(n); break;
+
+    case 'd': this.position(n, this.x); break;
+    case 'm': this.selectGraphicRendition(value); break;
+    case 'r': this.setMargins(value); break;
+
+    case 'H':
+    case 'f':
+        var x = 1, y = 1;
+        if (value != '') {
+            var values = value.split(';');
+            if (values[0] != '') y = parseInt(values[0]);
+            if (values.length == 2) x = parseInt(values[1]);
         }
-    };
+        this.position(y, x);
+        break;
 
+    case 'h':
+        if (value == '?25') this.show = true;
+        break;
 
+    case 'l':
+        if (value == '?25') {
+            this.show = false;
+            this.buffer[this.y - 1][this.x - 1] = undefined;
+            this.shouldPrint = true;
+        }
+        break;
+
+    case 'S': console.log('scrollUp'); break;
+    case 'T': console.log('scrollDown'); break;
+
+    default:
+        console.error('Unhandled escape sequence: ' + match[0]);
+        break;
+    }
+
+    this.string = this.string.slice(match[0].length);
+};
 
 TTYDecoder.prototype.storeCharacter = function (char) {
     var background = this.background;
