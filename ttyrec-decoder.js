@@ -167,7 +167,7 @@ TTYDecoder.prototype.eraseData = function (n) {
         this.buffer.splice(this.y);
         this.initRows(HEIGHT - this.y);
 
-        this.dirtifyLine(this.x, WIDTH);
+        this.dirtyLine(this.x, WIDTH);
 
         if (this.updateLines['-1'] == undefined) {
             for (j = this.y + 1; j <= HEIGHT; j++) {
@@ -190,7 +190,7 @@ TTYDecoder.prototype.eraseData = function (n) {
             }
         }
 
-        this.dirtifyLine(1, this.x);
+        this.dirtyLine(1, this.x);
 
     } else if (n == 2) {
         this.buffer = [[]];
@@ -214,13 +214,13 @@ TTYDecoder.prototype.eraseInLine = function (n) {
 
     if (n == 0) {
         this.buffer[this.y - 1].splice(this.x - 1);
-        this.dirtifyLine(this.x, WIDTH);
+        this.dirtyLine(this.x, WIDTH);
     } else if (n == 1) {
         for (i = 0; i < this.x; i++) {
             this.buffer[this.y - 1][i] = undefined;
         }
 
-        this.dirtifyLine(1, this.x);
+        this.dirtyLine(1, this.x);
 
     } else if (n == 2) {
         this.buffer[this.y - 1] = [];
@@ -650,7 +650,7 @@ TTYDecoder.prototype.storeBuffer = function () {
     this.frames[++numFrames] = newFrame;
 };
 
-TTYDecoder.prototype.dirtifyLine = function (min, max) {
+TTYDecoder.prototype.dirtyLine = function (min, max) {
     if (this.updateLines['-1'] == undefined &&
         this.updateLines[this.y] == undefined) {
         for (var i = min; i <= max; i++) {
