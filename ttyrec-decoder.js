@@ -167,7 +167,8 @@ TTYDecoder.prototype.eraseData = function (n) {
             this.buffer[i] = [];
         }
         this.dirtyLines(1, this.y - 1);
-        this.wipeInline();
+
+        this.clearUpToCursor();
 
     } else if (n == 2) {
         this.buffer = [[]];
@@ -190,7 +191,7 @@ TTYDecoder.prototype.eraseInLine = function (n) {
     if (n == 0) {
         this.clearToEndOfBuffer();
     } else if (n == 1) {
-        this.wipeInline();
+        this.clearUpToCursor();
     } else if (n == 2) {
         this.buffer[this.y - 1] = [];
         this.dirtyLines(this.y);
@@ -203,7 +204,7 @@ TTYDecoder.prototype.eraseCharacters = function (n) {
     for (var i = 0; i < n; i++) {
         this.buffer[this.y - 1][this.x - 1 + i] = undefined;
     }
-    this.dirtyInline(this.x, n);
+    this.dirtyInLine(this.x, n);
 };
 
 TTYDecoder.prototype.deleteLine = function (n) {
@@ -221,7 +222,7 @@ TTYDecoder.prototype.deleteLine = function (n) {
 TTYDecoder.prototype.deleteCharacter = function (n) {
     if (isNaN(n)) n = 1;
     this.buffer[this.y - 1].splice(this.x - 1, n);
-    this.dirtyInline(this.x, WIDTH);
+    this.dirtyInLine(this.x, WIDTH);
 };
 
 TTYDecoder.prototype.insertLine = function (n) {
@@ -327,7 +328,7 @@ TTYDecoder.prototype.renderFrame = function (string) {
 
     if (this.show) {
         this.buffer[this.y - 1][this.x - 1] = this.storeCharacter(' ');
-        this.dirtyInline(this.x);
+        this.dirtyInLine(this.x);
     }
 
     while (this.string != '') {
@@ -350,7 +351,7 @@ TTYDecoder.prototype.renderFrame = function (string) {
 
     if (this.show) {
         this.buffer[this.y - 1][this.x - 1] = this.storeCharacter('_');
-        this.dirtyInline(this.x);
+        this.dirtyInLine(this.x);
     }
 };
 
@@ -381,7 +382,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
                 // Backspace
                 if (this.show) {
                     this.buffer[this.y - 1][this.x - 1] = undefined;
-                    this.dirtyInline(this.x);
+                    this.dirtyInLine(this.x);
                 }
                 this.x--;
 
@@ -433,7 +434,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
         } else {
             this.buffer[this.y - 1][this.x - 1] = this.storeCharacter(character);
 
-            this.dirtyInline(this.x++);
+            this.dirtyInLine(this.x++);
         }
     }
     this.shouldPrint = true;
@@ -576,7 +577,7 @@ TTYDecoder.prototype.storeBuffer = function () {
     this.frames[++numFrames] = newFrame;
 };
 
-TTYDecoder.prototype.dirtyInline = function (min, max) {
+TTYDecoder.prototype.dirtyInLine = function (min, max) {
     if (max == undefined) max = min;
 
     if (this.updateLines['-1'] == undefined &&
@@ -599,14 +600,14 @@ TTYDecoder.prototype.dirtyLines = function (min, max) {
 
 TTYDecoder.prototype.clearToEndOfBuffer = function () {
     this.buffer[this.y - 1].splice(this.x - 1);
-    this.dirtyInline(this.x, WIDTH);
+    this.dirtyInLine(this.x, WIDTH);
 };
 
-TTYDecoder.prototype.wipeInline = function () {
+TTYDecoder.prototype.clearUpToCursor = function () {
     for (var i = 0, il = this.x; i < il; i++) {
         this.buffer[this.y - 1][i] = undefined;
     }
-    this.dirtyInline(1, this.x);
+    this.dirtyInLine(1, this.x);
 };
 
 TTYDecoder.prototype.storeFrame = function() {
