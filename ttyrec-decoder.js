@@ -147,12 +147,8 @@ TTYDecoder.prototype.horizontalAbsolute = function (n) {
 };
 
 TTYDecoder.prototype.position = function (row, col) {
-    if (row < this.y) {
-        this.up(this.y - row);
-    }
-    else if (row > this.y) {
-        this.down(row - this.y);
-    }
+    if (row < this.y) this.up(this.y - row);
+    else if (row > this.y) this.down(row - this.y);
     this.x = col;
 };
 
@@ -161,7 +157,6 @@ TTYDecoder.prototype.eraseData = function (n) {
 
     if (n == 0) {
         this.clearToEndOfBuffer();
-
         this.buffer.splice(this.y);
         this.initRows(HEIGHT - this.y);
         this.dirtyLines(this.y + 1, HEIGHT);
@@ -172,7 +167,6 @@ TTYDecoder.prototype.eraseData = function (n) {
             this.buffer[i] = [];
         }
         this.dirtyLines(1, this.y - 1);
-
         this.wipeInline();
 
     } else if (n == 2) {
@@ -216,7 +210,6 @@ TTYDecoder.prototype.deleteLine = function (n) {
     if (isNaN(n)) n = 1;
 
     this.buffer.splice(this.y - 1, n);
-
     this.dirtyLines(this.y, HEIGHT);
 
     var offset = HEIGHT - n;
@@ -227,9 +220,7 @@ TTYDecoder.prototype.deleteLine = function (n) {
 
 TTYDecoder.prototype.deleteCharacter = function (n) {
     if (isNaN(n)) n = 1;
-
     this.buffer[this.y - 1].splice(this.x - 1, n);
-
     this.dirtyInline(this.x, WIDTH);
 };
 
@@ -241,7 +232,6 @@ TTYDecoder.prototype.insertLine = function (n) {
         this.buffer.splice(this.y - 1, 0, []);
     }
     this.buffer.splice(this.marginBottom, n);
-
     this.dirtyLines(this.y, this.marginBottom);
 };
 
