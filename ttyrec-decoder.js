@@ -156,13 +156,14 @@ TTYDecoder.prototype.eraseData = function (n) {
     if (isNaN(n)) n = 0;
 
     if (n == 0) {
-        this.clearToEndOfBuffer();
+        this.clearToEndOfLine();
+
         this.buffer.splice(this.y);
         this.initRows(HEIGHT - this.y);
         this.dirtyLines(this.y + 1, HEIGHT);
 
     } else if (n == 1) {
-        // Clear from the cursor to beginning of buffer.
+        // Clear from the beginning of the buffer to the cursor.
         for (var i = 0, il = this.y - 1; i < il; i++) {
             this.buffer[i] = [];
         }
@@ -189,7 +190,7 @@ TTYDecoder.prototype.eraseInLine = function (n) {
     if (isNaN(n)) n = 0;
 
     if (n == 0) {
-        this.clearToEndOfBuffer();
+        this.clearToEndOfLine();
     } else if (n == 1) {
         this.clearUpToCursor();
     } else if (n == 2) {
@@ -598,7 +599,7 @@ TTYDecoder.prototype.dirtyLines = function (min, max) {
     }
 };
 
-TTYDecoder.prototype.clearToEndOfBuffer = function () {
+TTYDecoder.prototype.clearToEndOfLine = function () {
     this.buffer[this.y - 1].splice(this.x - 1);
     this.dirtyInLine(this.x, WIDTH);
 };
