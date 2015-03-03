@@ -240,11 +240,7 @@ TTYDecoder.prototype.deleteLine = function (n) {
 
     this.buffer.splice(this.y - 1, n);
 
-    if (this.updateLines['-1'] == undefined) {
-        for (var i = this.y; i <= HEIGHT; i++) {
-            this.updateLines[i] = true;
-        }
-    }
+    this.dirtyLines(this.y, HEIGHT);
 
     var offset = HEIGHT - n;
     for (var j = 0; offset + j < HEIGHT; j++) {
@@ -274,11 +270,7 @@ TTYDecoder.prototype.insertLine = function (n) {
     }
     this.buffer.splice(this.marginBottom, n);
 
-    if (this.updateLines['-1'] == undefined) {
-        for (var k = this.y; k <= this.marginBottom; k++) {
-            this.updateLines[k] = true;
-        }
-    }
+    this.dirtyLines(this.y, this.marginBottom);
 };
 
 TTYDecoder.prototype.selectGraphicRendition = function (value) {
@@ -440,11 +432,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
                 this.buffer.splice(this.y, 0, []);
                 this.buffer.splice(this.marginTop - 1, 1);
 
-                if (this.updateLines['-1'] == undefined) {
-                    for (k = this.marginTop; k <= this.y; k++) {
-                        this.updateLines[k] = true;
-                    }
-                }
+                this.dirtyLines(this.marginTop, this.y);
 
             } else if (code == 13) {
                 // CR
@@ -475,11 +463,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
                     this.buffer.splice(this.y - 1, 0, []);
                     this.buffer.splice(this.marginBottom, 1);
 
-                    if (this.updateLines['-1'] == undefined) {
-                        for (k = this.y; k <= this.marginBottom; k++) {
-                            this.updateLines[k] = true;
-                        }
-                    }
+                    this.dirtyLines(this.y, this.marginBottom);
 
                     j++;
                 } else {
