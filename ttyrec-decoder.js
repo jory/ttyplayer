@@ -5,82 +5,451 @@ var HEIGHT = 24;
 var WIDTH = 80;
 
 module.exports = function (parsed, callback) {
-    var ttyrec = {};
-    ttyrec.frames = [];
+    var store_buffer = function () {
 
-    var numFrames = 0;
+        var previousFrame = ttyrec.frames[numFrames];
 
-    // State variables
-    var buffer, cursor, margins, rendition, pre_pend, should_print,
-        update_lines, update_chars;
-
-    var reset_buffer = function() {
-        reset_cursor();
-        reset_margins();
-        reset_rendition();
-
-        buffer = new Array(HEIGHT);
+        var newFrame = [];
         for (var i = 0; i < HEIGHT; i++) {
-            buffer[i] = new Array(WIDTH);
+            newFrame[i] = new Array(WIDTH);
             for (var j = 0; j < WIDTH; j++) {
-                buffer[i][j] = store_character(' ');
+                var prev = previousFrame[i][j];
+                if (typeof prev === "object") {
+                    newFrame[i][j] = numFrames;
+                } else if (typeof prev === "number"){
+                    newFrame[i][j] = prev;
+                } else {
+                    console.warn("UHOH!");
+                }
             }
         }
 
-        pre_pend = '';
+        if (update_lines['-1']) {
+            update_chars = {};
+            update_lines = {};
 
-        update_lines = {};
-        update_chars = {};
-
-        should_print = false;
-    };
-
-    var reset_cursor = function() {
-        cursor = {
-            x: 1,
-            y: 1,
-            show: false
-        };
-    };
-
-    var reset_margins = function() {
-        margins = {
-            top: 1,
-            bottom: HEIGHT
-        };
-    };
-
-    var reset_rendition = function () {
-        rendition = {
-            foreground: 'white',
-            background: 'black',
-            light: false,
-            negative: false
-        };
-    };
-
-    var capitalize = function(string) {
-        return string.charAt(0).toUpperCase() + string.slice(1);
-    };
-
-    var store_character = function(char) {
-
-        var background = rendition.background;
-        var foreground = rendition.foreground;
-
-        if (rendition.light) {
-            background = 'bright' + capitalize(background);
-            foreground = 'bright' + capitalize(foreground);
+            var m = buffer.length;
+            for (var n = 1; n <= m; n++) {
+                update_lines[n] = true;
+            }
         }
 
-        return {
-            char: char,
-            foreground: rendition.negative ? background : foreground,
-            background: rendition.negative ? foreground : background
-        };
+        for (var point in update_chars) {
+            var points = point.split('_');
+            var x = parseInt(points[0]) - 1;
+            var y = parseInt(points[1]) - 1;
+
+            // Skip any character that will be covered by a line printing.
+            if (update_lines[points[0]]) {
+                continue;
+            }
+
+            var char = buffer[x][y];
+            if (char === undefined) char = store_character(' ');
+            newFrame[x][y] = char;
+        }
+
+        for (var line in update_lines) {
+            var i = parseInt(line) - 1;
+            for (var j = 0; j < WIDTH; j++) {
+                var char = buffer[i][j];
+                if (char === undefined) char = store_character(' ');
+                newFrame[i][j] = char;
+            }
+        }
+
+        update_chars = {};
+        update_lines = {};
+
+        ttyrec.frames[++numFrames] = newFrame;
     };
 
-    var render_frame = function (string) {
+    var store_frame = function() {
+        if (should_print) {
+            store_buffer();
+            should_print = false;
+        }
+    };
+};
+
+function TTYDecoder (parsed, callback) {
+    if (!(this instanceof TTYDecoder)) {
+        return new TTYDecoder(parsed, callback);
+    }
+
+    this.frames = [];
+
+    this.resetBuffer();
+
+    this.frames[0] = Hoek.clone(this.buffer);
+
+    for (var i = 0, il = parsed.positions.length; i < il; i++) {
+        var current = parsed.positions[i];
+
+        render_frame(parsed.blob.slice(current.start, current.end));
+        store_frame();
+
+        var next = parsed.positions[i + 1];
+        if (next) {
+            var millisec;
+
+            if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
+            else if (next.sec > current.sec) {
+                millisec = ((next.sec - current.sec - 1) * 1000 +
+                            ((1000000 - current.usec) + next.usec)/1000);
+            }
+            else {
+                console.error('Frame ' + (index + 1) +
+                              'reports an earlier time than frame ' + index);
+                millisec = 0;
+            }
+        }
+    }
+
+    callback(null, ttyrec);
+
+    return this;
+};
+
+TTYDecoder.prototype.resetBuffer = function () {
+    this.resetCursor();
+    this.resetMargins();
+    this.resetRendition();
+
+    this.buffer = new Array(HEIGHT);
+    for (var i = 0; i < HEIGHT; i++) {
+        this.buffer[i] = new Array(WIDTH);
+        for (var j = 0; j < WIDTH; j++) {
+            this.buffer[i][j] = store_character(' ');
+        }
+    }
+
+    this.prepend = '';
+
+    this.updateLines = {};
+    this.updateChars = {};
+
+    this.shouldPrint = false;
+};
+
+TTYDecoder.prototype.resetCursor = function () {
+    this.x = 1;
+    this.y = 1;
+    this.showCursor = false;
+};
+
+TTYDecoder.prototype.resetMargins = function () {
+    this.marginTop = 1;
+    this.marginBottom = HEIGHT;
+};
+
+TTYDecoder.prototype.resetRendition = function () {
+    this.foreground = 'white';
+    this.background = 'black';
+    this.light = false;
+    this.negative = false;
+};
+
+TTYDecoder.prototype.initRows = function (n) {
+    for (var i = 0; i < n; i++) {
+        if (this.buffer[this.y + i] == undefined) {
+            this.buffer[this.y + i] = [];
+        }
+    }
+};
+
+TTYDecoder.prototype.up = function (n) {
+    if (this.y === 1) return;
+    if (isNaN(n)) n = 1;
+
+    this.y -= n;
+
+    if (this.y < 1) this.y = 1;
+};
+
+TTYDecoder.prototype.back = function (n) {
+    if (this.x === 1) return;
+    if (isNaN(n)) n = 1;
+
+    this.x -= n;
+
+    if (this.x < 1) this.x = 1;
+};
+
+TTYDecoder.prototype.down = function (n) {
+    if (isNaN(n)) n = 1;
+    this.initRows(n);
+    this.y += n;
+};
+
+TTYDecoder.prototype.forward = function (n) {
+    if (isNaN(n)) n = 1;
+    this.x += n;
+};
+
+TTYDecoder.prototype.nextLine = function (n) {
+    this.down(n);
+    this.x = 1;
+};
+
+TTYDecoder.prototype.prevLine = function (n) {
+    this.up(n);
+    this.x = 1;
+};
+
+TTYDecoder.prototype.horizontalAbsolute = function (n) {
+    if (isNaN(n)) {
+        console.error('Undefined behaviour for cursor_horizontal_absolute');
+        return;
+    }
+    this.x = n;
+};
+
+TTYDecoder.prototype.position = function (row, col) {
+    if (row < this.y) {
+        this.up(this.y - row);
+    }
+    else if (row > this.y) {
+        this.down(row - this.y);
+    }
+    this.x = col;
+};
+
+TTYDecoder.prototype.eraseData = function (n) {
+    if (isNaN(n)) n = 0;
+
+    var i, j;
+
+    if (n == 0) {
+        // Clear from the cursor to the end of the buffer.
+        this.buffer[this.y - 1].splice(this.x - 1);
+        this.buffer.splice(this.y);
+        this.initRows(HEIGHT - this.y);
+
+        if (this.updateLines['-1'] == undefined) {
+            if (this.updateLines[this.y] == undefined) {
+                for (i = this.x; i <= WIDTH; i++) {
+                    this.updateChars[this.y + '_' + i] = true;
+                }
+            }
+
+            for (j = this.y + 1; j <= HEIGHT; j++) {
+                this.updateLines[j] = true;
+            }
+        }
+    } else if (n == 1) {
+        // Clear from the cursor to beginning of buffer.
+        for (i = 0; i < this.y - 1; i++) {
+            this.buffer[i] = [];
+        }
+
+        for (j = 0; j < this.x; j++) {
+            this.buffer[this.y - 1][j] = undefined;
+        }
+
+        if (this.updateLines['-1'] == undefined) {
+            for (i = 1; i < this.y; i++) {
+                this.updateLines[i] = true;
+            }
+
+            if (this.updateLines[this.y] == undefined) {
+                for (j = 1; j <= this.x; j++) {
+                    this.updateChars[this.y + '_' + j] = true;
+                }
+            }
+        }
+    } else if (n == 2) {
+        this.buffer = [[]];
+
+        // Moving the cursor might not be the right behaviour.
+        this.x = 1;
+        this.y = 1;
+
+        this.initRows(HEIGHT - this.y);
+
+        this.updateLines['-1'] = true;
+    } else {
+        console.error('Undefined behaviour for eraseData.');
+    }
+};
+
+TTYDecoder.prototype.eraseInLine = function (n) {
+    if (isNaN(n)) n = 0;
+
+    var i, j;
+
+    if (n == 0) {
+        this.buffer[this.y - 1].splice(this.x - 1);
+
+        if (this.updateLines['-1'] == undefined &&
+            this.updateLines[this.y] == undefined) {
+            for (i = this.x; i <= WIDTH; i++) {
+                this.updateChars[this.y + '_' + i] = true;
+            }
+        }
+    } else if (n == 1) {
+        for (i = 0; i < this.x; i++) {
+            this.buffer[this.y - 1][i] = undefined;
+        }
+
+        if (this.updateLines['-1'] == undefined &&
+            this.updateLines[this.y] == undefined) {
+            for (j = 1; j <= this.x; j++) {
+                this.updateChars[this.y + '_' + j] = true;
+            }
+        }
+    } else if (n == 2) {
+        this.buffer[this.y - 1] = [];
+
+        if (this.updateLines['-1'] == undefined) {
+            this.updateLines[this.y] = true;
+        }
+    } else {
+        console.error('Undefined behaviour for eraseInLine.');
+    }
+};
+
+TTYDecoder.prototype.eraseCharacters = function (n) {
+    for (var i = 0; i < n; i++) {
+        this.buffer[this.y - 1][this.x - 1 + i] = undefined;
+    }
+
+    if (this.updateLines['-1'] == undefined &&
+        this.updateLines[this.y] == undefined) {
+        for (var j = 0; i < n; i++) {
+            this.updateChars[this.y + '_' + (this.x + i)] = true;
+        }
+    }
+};
+
+TTYDecoder.prototype.deleteLine = function (n) {
+    if (isNaN(n)) n = 1;
+
+    this.buffer.splice(this.y - 1, n);
+
+    if (this.updateLines['-1'] == undefined) {
+        for (var i = 0; this.y + i <= HEIGHT; i++) {
+            this.updateLines[(this.y + i)] = true;
+        }
+    }
+
+    var offset = HEIGHT - n;
+    for (var j = 0; offset + j < HEIGHT; j++) {
+        this.buffer.push([]);
+    }
+};
+
+TTYDecoder.prototype.deleteCharacter = function (n) {
+    if (isNaN(n)) n = 1;
+
+    this.buffer[this.y - 1].splice(this.x - 1, n);
+
+    if (this.updateLines['-1'] == undefined &&
+        this.updateLines[this.y] == undefined) {
+        for (var i = 0; i <= (WIDTH - this.x); i++) {
+            this.updateChars[this.y + '_' + (this.x + i)] = true;
+        }
+    }
+};
+
+TTYDecoder.prototype.insertLine = function (n) {
+    if (isNaN(n)) n = 1;
+
+    // I'm doing this really inefficiently / weirdly here...?
+    for (var i = 0; i < n; i++) {
+        this.buffer.splice(this.y - 1, 0, []);
+    }
+    this.buffer.splice(this.marginBottom, n);
+
+    if (this.updateLines['-1'] == undefined) {
+        for (var k = this.y; k <= this.marginBottom; k++) {
+            this.updateLines[k] = true;
+        }
+    }
+};
+
+TTYDecoder.prototype.selectGraphicRendition = function (value) {
+    if (value == '') {
+        this.resetRendition();
+    } else {
+        var values = value.split(';');
+        for (var i = 0, il = values.length; i < il; i++) {
+            var val = parseInt(values[i]);
+
+            switch (val) {
+            case 0:
+                this.resetRendition();
+                break;
+            case 1:
+                this.light = true;
+                break;
+            case 5:
+                // Blink.
+                break;
+            case 7:
+                this.negative = true;
+                break;
+            case 27:
+                this.negative = false;
+                break;
+            case 39:
+                // Default text colour.
+                this.foreground = 'white';
+                break;
+            case 49:
+                // Default background colour.
+                this.background = 'black';
+                break;
+            default:
+                if ((val >= 30 && val <= 37) || (val >= 40 && val <= 47)) {
+                    var background = false;
+                    if ((val - 39) > 0) {
+                        background = true;
+                        val -= 40;
+                    } else {
+                        val -= 30;
+                    }
+
+                    var colour;
+                    if (val == 0) colour = 'black';
+                    else if (val == 1) colour = 'red';
+                    else if (val == 2) colour = 'green';
+                    else if (val == 3) colour = 'yellow';
+                    else if (val == 4) colour = 'blue';
+                    else if (val == 5) colour = 'magenta';
+                    else if (val == 6) colour = 'cyan';
+                    else if (val == 7) colour = 'white';
+
+                    if (background) {
+                        this.background = colour;
+                    } else {
+                        this.foreground = colour;
+                    }
+                } else {
+                    console.error('Unhandled SGR parameter: ' + val);
+                }
+                break;
+            }
+        }
+    }
+
+};
+
+TTYDecoder.prototype.setMargins = function (value) {
+    var top = 1;
+    var bottom = HEIGHT;
+
+    if (value != '') {
+        var values = value.split(';');
+        if (values[0] != '') top = parseInt(values[0]);
+        if (values.length == 2) bottom = parseInt(values[1]);
+    }
+
+    this.marginTop = top;
+    this.marginBottom = bottom;
+};
+
+TTYDecoder.prototype.render_frame = function (string) {
 
         string = pre_pend + string;
         pre_pend = '';
@@ -201,309 +570,6 @@ module.exports = function (parsed, callback) {
         };
 
         var handle_esc = function() {
-
-            var init_rows = function(n) {
-                for (var i = 0; i < n; i++) {
-                    if (buffer[cursor.y + i] == undefined) {
-                        buffer[cursor.y + i] = [];
-                    }
-                }
-            };
-
-            var cursor_up = function(n) {
-                if (cursor.y == 1) return;
-                if (isNaN(n)) n = 1;
-
-                cursor.y -= n;
-
-                if (cursor.y < 1) cursor.y = 1;
-            };
-
-            var cursor_down = function(n) {
-                if (isNaN(n)) n = 1;
-
-                init_rows(n);
-                cursor.y += n;
-            };
-
-            var cursor_forward = function(n) {
-                if (isNaN(n)) n = 1;
-
-                cursor.x += n;
-            };
-
-            var cursor_back = function(n) {
-                if (cursor.x == 1) return;
-                if (isNaN(n)) n = 1;
-
-                cursor.x -= n;
-
-                if (cursor.x < 1) cursor.x = 1;
-            };
-
-            var cursor_next_line = function(n) {
-                cursor_down(n);
-                cursor.x = 1;
-            };
-
-            var cursor_prev_line = function(n) {
-                cursor_up(n);
-                cursor.x = 1;
-            };
-
-            var cursor_horizontal_absolute = function(n) {
-                if (isNaN(n)) {
-                    console.error('Undefined behaviour for cursor_horizontal_absolute');
-                    return;
-                }
-
-                cursor.x = n;
-            };
-
-            var cursor_position = function(row, column) {
-                if (row < cursor.y) {
-                    cursor_up(cursor.y - row);
-                }
-                else if (row > cursor.y) {
-                    cursor_down(row - cursor.y);
-                }
-
-                cursor.x = column;
-            };
-
-            var erase_data = function(n) {
-                if (isNaN(n)) n = 0;
-                if (n == 0) {
-                    // Clear from the cursor to the end of the buffer.
-                    buffer[cursor.y - 1].splice(cursor.x - 1);
-                    buffer.splice(cursor.y);
-                    init_rows(HEIGHT - cursor.y);
-
-                    if (update_lines['-1'] == undefined) {
-                        if (update_lines[cursor.y] == undefined) {
-                            for (var i = cursor.x; i <= WIDTH; i++) {
-                                update_chars[cursor.y + '_' + i] = true;
-                            }
-                        }
-
-                        for (var j = cursor.y + 1; j <= HEIGHT; j++) {
-                            update_lines[j] = true;
-                        }
-                    }
-                }
-                else if (n == 1) {
-                    // Clear from the cursor to beginning of buffer.
-                    for (var i = 0; i < cursor.y - 1; i++) {
-                        buffer[i] = [];
-                    }
-
-                    for (var j = 0; j < cursor.x; j++) {
-                        buffer[cursor.y - 1][j] = undefined;
-                    }
-
-                    if (update_lines['-1'] == undefined) {
-                        for (var i = 1; i < cursor.y; i++) {
-                            update_lines[i] = true;
-                        }
-
-                        if (update_lines[cursor.y] == undefined) {
-                            for (var j = 1; j <= cursor.x; j++) {
-                                update_chars[cursor.y + '_' + j] = true;
-                            }
-                        }
-                    }
-                }
-                else if (n == 2) {
-                    buffer = [[]];
-
-                    // Moving the cursor might not be the right behaviour.
-                    cursor.x = 1;
-                    cursor.y = 1;
-
-                    init_rows(HEIGHT - cursor.y);
-
-                    update_lines['-1'] = true;
-                }
-                else {
-                    console.error('Undefined behaviour for erase_data.');
-                }
-            };
-
-            var erase_in_line = function(n) {
-                if (isNaN(n)) n = 0;
-                if (n == 0) {
-                    buffer[cursor.y - 1].splice(cursor.x - 1);
-
-                   if (update_lines['-1'] == undefined &&
-                       update_lines[cursor.y] == undefined) {
-                       for (var i = cursor.x; i <= WIDTH; i++) {
-                           update_chars[cursor.y + '_' + i] = true;
-                       }
-                   }
-                }
-                else if (n == 1) {
-                    for (var i = 0; i < cursor.x; i++) {
-                        buffer[cursor.y - 1][i] = undefined;
-                    }
-
-                   if (update_lines['-1'] == undefined &&
-                       update_lines[cursor.y] == undefined) {
-                       for (var j = 1; j <= cursor.x; j++) {
-                           update_chars[cursor.y + '_' + j] = true;
-                       }
-                   }
-                }
-                else if (n == 2) {
-                    buffer[cursor.y - 1] = [];
-
-                    if (update_lines['-1'] == undefined) {
-                        update_lines[cursor.y] = true;
-                    }
-                }
-                else {
-                    console.error('Undefined behaviour for erase_in_line.');
-                }
-            };
-
-            var erase_characters = function(n) {
-                for (var i = 0; i < n; i++) {
-                    buffer[cursor.y - 1][cursor.x - 1 + i] = undefined;
-                }
-
-                if (update_lines['-1'] == undefined &&
-                    update_lines[cursor.y] == undefined) {
-                    for (var i = 0; i < n; i++) {
-                        update_chars[cursor.y + '_' + (cursor.x + i)] = true;
-                    }
-                }
-            };
-
-            var delete_line = function(n) {
-                if (isNaN(n)) n = 1;
-
-                buffer.splice(cursor.y - 1, n);
-
-                if (update_lines['-1'] == undefined) {
-                    for (var i = 0; cursor.y + i <= HEIGHT; i++) {
-                        update_lines[(cursor.y + i)] = true;
-                    }
-                }
-
-                var offset = HEIGHT - n;
-                for (var j = 0; offset + j < HEIGHT; j++) {
-                    buffer.push([]);
-                }
-            };
-
-            var delete_character = function(n) {
-                if (isNaN(n)) n = 1;
-
-                buffer[cursor.y - 1].splice(cursor.x - 1, n);
-
-                if (update_lines['-1'] == undefined &&
-                    update_lines[cursor.y] == undefined) {
-                    for (var i = 0; i <= (WIDTH - cursor.x); i++) {
-                        update_chars[cursor.y + '_' + (cursor.x + i)] = true;
-                    }
-                }
-
-            };
-
-            var insert_line = function(n) {
-                if (isNaN(n)) n = 1;
-
-                // I'm doing this really inefficiently / weirdly here...?
-                for (var i = 0; i < n; i++) {
-                    buffer.splice(cursor.y - 1, 0, []);
-                }
-                buffer.splice(margins.bottom, n);
-
-                if (update_lines['-1'] == undefined) {
-                    for (var k = cursor.y; k <= margins.bottom; k++) {
-                        update_lines[k] = true;
-                    }
-                }
-            };
-
-            var select_graphic_rendition = function(value) {
-                if (value == '') {
-                    reset_rendition();
-                }
-                else {
-                    var values = value.split(';');
-                    var l = values.length;
-                    for (var i = 0; i < l; i++) {
-                        var val = parseInt(values[i]);
-                        if (val == 0) {
-                            reset_rendition();
-                        }
-                        else if (val == 1) {
-                            rendition.light = true;
-                        }
-                        else if (val == 5) {
-                            // Blink.
-                        }
-                        else if (val == 7) {
-                            rendition.negative = true;
-                        }
-                        else if (val == 27) {
-                            rendition.negative = false;
-                        }
-                        else if (val == 39) {
-                            // Default text colour.
-                            rendition.foreground = 'white';
-                        }
-                        else if (val == 49) {
-                            // Default background colour.
-                            rendition.background = 'black';
-                        }
-                        else if ((val >= 30 && val <= 37) || (val >= 40 && val <= 47)) {
-
-                            var background = false;
-                            if ((val - 39) > 0) {
-                                background = true;
-                                val -= 40;
-                            }
-                            else {
-                                val -= 30;
-                            }
-
-                            var colour;
-                            if (val == 0) colour = 'black';
-                            else if (val == 1) colour = 'red';
-                            else if (val == 2) colour = 'green';
-                            else if (val == 3) colour = 'yellow';
-                            else if (val == 4) colour = 'blue';
-                            else if (val == 5) colour = 'magenta';
-                            else if (val == 6) colour = 'cyan';
-                            else if (val == 7) colour = 'white';
-
-                            if (background) {
-                                rendition.background = colour;
-                            }
-                            else {
-                                rendition.foreground = colour;
-                            }
-                        }
-                        else {
-                            console.error('Unhandled SGR parameter: ' + val);
-                        }
-                    }
-                }
-            };
-
-            var set_margins = function(value) {
-                var top = 1;
-                var bottom = 24;
-                if (value != '') {
-                    var values = value.split(';');
-                    if (values[0] != '') top = parseInt(values[0]);
-                    if (values.length == 2) bottom = parseInt(values[1]);
-                }
-
-                margins.top = top;
-                margins.bottom = bottom;
-            };
 
             var match = string.match(regexp);
             var c = match[2];
@@ -636,97 +702,24 @@ module.exports = function (parsed, callback) {
         }
     };
 
-    var store_buffer = function () {
 
-        var previousFrame = ttyrec.frames[numFrames];
 
-        var newFrame = [];
-        for (var i = 0; i < HEIGHT; i++) {
-            newFrame[i] = new Array(WIDTH);
-            for (var j = 0; j < WIDTH; j++) {
-                var prev = previousFrame[i][j];
-                if (typeof prev === "object") {
-                    newFrame[i][j] = numFrames;
-                } else if (typeof prev === "number"){
-                    newFrame[i][j] = prev;
-                } else {
-                    console.warn("UHOH!");
-                }
-            }
-        }
+TTYDecoder.prototype.storeCharacter = function (char) {
+    var background = this.background;
+    var foreground = this.foreground;
 
-        if (update_lines['-1']) {
-            update_chars = {};
-            update_lines = {};
-
-            var m = buffer.length;
-            for (var n = 1; n <= m; n++) {
-                update_lines[n] = true;
-            }
-        }
-
-        for (var point in update_chars) {
-            var points = point.split('_');
-            var x = parseInt(points[0]) - 1;
-            var y = parseInt(points[1]) - 1;
-
-            // Skip any character that will be covered by a line printing.
-            if (update_lines[points[0]]) {
-                continue;
-            }
-
-            var char = buffer[x][y];
-            if (char === undefined) char = store_character(' ');
-            newFrame[x][y] = char;
-        }
-
-        for (var line in update_lines) {
-            var i = parseInt(line) - 1;
-            for (var j = 0; j < WIDTH; j++) {
-                var char = buffer[i][j];
-                if (char === undefined) char = store_character(' ');
-                newFrame[i][j] = char;
-            }
-        }
-
-        update_chars = {};
-        update_lines = {};
-
-        ttyrec.frames[++numFrames] = newFrame;
-    };
-
-    var store_frame = function() {
-        if (should_print) {
-            store_buffer();
-            should_print = false;
-        }
-    };
-
-    reset_buffer();
-    ttyrec.frames[0] = Hoek.clone(buffer);
-
-    for (var i = 0, il = parsed.positions.length; i < il; i++) {
-        var current = parsed.positions[i];
-
-        render_frame(parsed.blob.slice(current.start, current.end));
-        store_frame();
-
-        var next = parsed.positions[i + 1];
-        if (next) {
-            var millisec;
-
-            if (current.sec == next.sec) millisec = (next.usec - current.usec)/1000;
-            else if (next.sec > current.sec) {
-                millisec = ((next.sec - current.sec - 1) * 1000 +
-                            ((1000000 - current.usec) + next.usec)/1000);
-            }
-            else {
-                console.error('Frame ' + (index + 1) +
-                              'reports an earlier time than frame ' + index);
-                millisec = 0;
-            }
-        }
+    if (this.light) {
+        background = 'bright' + capitalize(background);
+        foreground = 'bright' + capitalize(foreground);
     }
 
-    callback(null, ttyrec);
+    return {
+        char: char,
+        foreground: this.negative ? background : foreground,
+        background: this.negative ? foreground : background
+    };
+};
+
+function capitalize (string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
 };
