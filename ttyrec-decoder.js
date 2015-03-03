@@ -167,7 +167,7 @@ TTYDecoder.prototype.eraseData = function (n) {
         this.buffer.splice(this.y);
         this.initRows(HEIGHT - this.y);
 
-        this.dirtyLine(this.x, WIDTH);
+        this.dirtyInline(this.x, WIDTH);
         this.dirtyLines(this.y + 1, HEIGHT);
 
     } else if (n == 1) {
@@ -180,13 +180,8 @@ TTYDecoder.prototype.eraseData = function (n) {
             this.buffer[this.y - 1][j] = undefined;
         }
 
-        if (this.updateLines['-1'] == undefined) {
-            for (i = 1; i < this.y; i++) {
-                this.updateLines[i] = true;
-            }
-        }
-
-        this.dirtyLine(1, this.x);
+        this.dirtyInline(1, this.x);
+        this.dirtyLines(1, this.y - 1);
 
     } else if (n == 2) {
         this.buffer = [[]];
@@ -210,20 +205,18 @@ TTYDecoder.prototype.eraseInLine = function (n) {
 
     if (n == 0) {
         this.buffer[this.y - 1].splice(this.x - 1);
-        this.dirtyLine(this.x, WIDTH);
+        this.dirtyInline(this.x, WIDTH);
     } else if (n == 1) {
         for (i = 0; i < this.x; i++) {
             this.buffer[this.y - 1][i] = undefined;
         }
 
-        this.dirtyLine(1, this.x);
+        this.dirtyInline(1, this.x);
 
     } else if (n == 2) {
         this.buffer[this.y - 1] = [];
 
-        if (this.updateLines['-1'] == undefined) {
-            this.updateLines[this.y] = true;
-        }
+        this.dirtyLines(this.y);
     } else {
         console.error('Undefined behaviour for eraseInLine.');
     }
@@ -248,8 +241,8 @@ TTYDecoder.prototype.deleteLine = function (n) {
     this.buffer.splice(this.y - 1, n);
 
     if (this.updateLines['-1'] == undefined) {
-        for (var i = 0; this.y + i <= HEIGHT; i++) {
-            this.updateLines[(this.y + i)] = true;
+        for (var i = this.y; i <= HEIGHT; i++) {
+            this.updateLines[i] = true;
         }
     }
 
@@ -646,7 +639,7 @@ TTYDecoder.prototype.storeBuffer = function () {
     this.frames[++numFrames] = newFrame;
 };
 
-TTYDecoder.prototype.dirtyLine = function (min, max) {
+TTYDecoder.prototype.dirtyInline = function (min, max) {
     if (this.updateLines['-1'] == undefined &&
         this.updateLines[this.y] == undefined) {
         for (var i = min; i <= max; i++) {
@@ -656,6 +649,8 @@ TTYDecoder.prototype.dirtyLine = function (min, max) {
 };
 
 TTYDecoder.prototype.dirtyLines = function (min, max) {
+    if (max == undefined) max = min;
+
     if (this.updateLines['-1'] == undefined) {
         for (var i = min; i <= max; i++) {
             this.updateLines[i] = true;
