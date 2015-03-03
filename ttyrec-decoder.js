@@ -62,18 +62,6 @@ module.exports = function (parsed, callback) {
     var buffer, cursor, margins, rendition, pre_pend, should_print,
         update_lines, update_chars;
 
-    var copyForward = function(index) {
-        for (var bl = buffer.length; index < bl; index++) {
-            var row = buffer[index];
-            for (var r = 0, rl = row.length; r < rl; r++) {
-                var atom = row[r];
-                if (typeof atom === "number") {
-                    row[r] = buffer[atom][r];
-                }
-            }
-        }
-    };
-
     var reset_buffer = function() {
         reset_cursor();
         reset_margins();
@@ -189,8 +177,6 @@ module.exports = function (parsed, callback) {
                     }
                     else if (code == 10) {
                         // LF
-                        copyForward(cursor.y);
-
                         buffer.splice(cursor.y, 0, []);
                         buffer.splice(margins.top - 1, 1);
 
@@ -228,12 +214,6 @@ module.exports = function (parsed, callback) {
                         }
                         else if (next == 'M') {
                             // Reverse LF
-                            copyForward(cursor.y - 1);
-
-                            // Putting a line in before the cursor, so
-                            // still the indices *afterwards* need to
-                            // be updated
-
                             buffer.splice(cursor.y - 1, 0, []);
                             buffer.splice(margins.bottom, 1);
 
@@ -449,8 +429,6 @@ module.exports = function (parsed, callback) {
             var delete_line = function(n) {
                 if (isNaN(n)) n = 1;
 
-                copyForward(cursor.y - 1 + n);
-
                 buffer.splice(cursor.y - 1, n);
 
                 if (update_lines['-1'] == undefined) {
@@ -468,13 +446,6 @@ module.exports = function (parsed, callback) {
             var delete_character = function(n) {
                 if (isNaN(n)) n = 1;
 
-                copyForward(cursor.y - 1);
-
-                // Doing a full copyForward here is a little
-                // aggressive, because we only need to update the
-                // remaining (length - (cursor.x - 1 + n)) in that
-                // row.
-
                 buffer[cursor.y - 1].splice(cursor.x - 1, n);
 
                 if (update_lines['-1'] == undefined &&
@@ -489,9 +460,7 @@ module.exports = function (parsed, callback) {
             var insert_line = function(n) {
                 if (isNaN(n)) n = 1;
 
-                copyForward(cursor.y - 1);
-
-                // I'm doing this really inefficiently / weirdly here...
+                // I'm doing this really inefficiently / weirdly here...?
                 for (var i = 0; i < n; i++) {
                     buffer.splice(cursor.y - 1, 0, []);
                 }
