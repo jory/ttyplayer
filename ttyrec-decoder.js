@@ -7,6 +7,10 @@ var WIDTH = 80;
 var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
 var partRegexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
 
+function capitalize (string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
 function TTYDecoder (parsed, callback) {
     if (!(this instanceof TTYDecoder)) {
         return new TTYDecoder(parsed, callback);
@@ -163,13 +167,9 @@ TTYDecoder.prototype.eraseData = function (n) {
         this.buffer.splice(this.y);
         this.initRows(HEIGHT - this.y);
 
-        if (this.updateLines['-1'] == undefined) {
-            if (this.updateLines[this.y] == undefined) {
-                for (i = this.x; i <= WIDTH; i++) {
-                    this.updateChars[this.y + '_' + i] = true;
-                }
-            }
+        this.dirtifyLine(this.x, WIDTH);
 
+        if (this.updateLines['-1'] == undefined) {
             for (j = this.y + 1; j <= HEIGHT; j++) {
                 this.updateLines[j] = true;
             }
@@ -217,13 +217,7 @@ TTYDecoder.prototype.eraseInLine = function (n) {
 
     if (n == 0) {
         this.buffer[this.y - 1].splice(this.x - 1);
-
-        if (this.updateLines['-1'] == undefined &&
-            this.updateLines[this.y] == undefined) {
-            for (i = this.x; i <= WIDTH; i++) {
-                this.updateChars[this.y + '_' + i] = true;
-            }
-        }
+        this.dirtifyLine(this.x, WIDTH);
     } else if (n == 1) {
         for (i = 0; i < this.x; i++) {
             this.buffer[this.y - 1][i] = undefined;
@@ -663,14 +657,18 @@ TTYDecoder.prototype.storeBuffer = function () {
     this.frames[++numFrames] = newFrame;
 };
 
+TTYDecoder.prototype.dirtifyLine = function (min, max) {
+    if (this.updateLines['-1'] == undefined &&
+        this.updateLines[this.y] == undefined) {
+        for (var i = min; i <= max; i++) {
+            this.updateChars[this.y + '_' + i] = true;
+        }
+    }
+};
+
 TTYDecoder.prototype.storeFrame = function() {
     if (this.shouldPrint) {
         this.storeBuffer();
         this.shouldPrint = false;
     }
-};
-
-
-function capitalize (string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
 };
