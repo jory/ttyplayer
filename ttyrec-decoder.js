@@ -159,8 +159,6 @@ TTYDecoder.prototype.position = function (row, col) {
 TTYDecoder.prototype.eraseData = function (n) {
     if (isNaN(n)) n = 0;
 
-    var i, j;
-
     if (n == 0) {
         // Clear from the cursor to the end of the buffer.
         this.buffer[this.y - 1].splice(this.x - 1);
@@ -172,16 +170,15 @@ TTYDecoder.prototype.eraseData = function (n) {
 
     } else if (n == 1) {
         // Clear from the cursor to beginning of buffer.
-        for (i = 0; i < this.y - 1; i++) {
+        for (var i = 0, il = this.y - 1; i < il; i++) {
             this.buffer[i] = [];
         }
+        this.dirtyLines(1, this.y - 1);
 
-        for (j = 0; j < this.x; j++) {
+        for (var j = 0, jl = this.x; j < jl; j++) {
             this.buffer[this.y - 1][j] = undefined;
         }
-
         this.dirtyInline(1, this.x);
-        this.dirtyLines(1, this.y - 1);
 
     } else if (n == 2) {
         this.buffer = [[]];
@@ -191,8 +188,8 @@ TTYDecoder.prototype.eraseData = function (n) {
         this.y = 1;
 
         this.initRows(HEIGHT - this.y);
-
         this.dirtyLines(-1);
+
     } else {
         console.error('Undefined behaviour for eraseData.');
     }
@@ -201,21 +198,16 @@ TTYDecoder.prototype.eraseData = function (n) {
 TTYDecoder.prototype.eraseInLine = function (n) {
     if (isNaN(n)) n = 0;
 
-    var i, j;
-
     if (n == 0) {
         this.buffer[this.y - 1].splice(this.x - 1);
         this.dirtyInline(this.x, WIDTH);
     } else if (n == 1) {
-        for (i = 0; i < this.x; i++) {
+        for (var i = 0; i < this.x; i++) {
             this.buffer[this.y - 1][i] = undefined;
         }
-
         this.dirtyInline(1, this.x);
-
     } else if (n == 2) {
         this.buffer[this.y - 1] = [];
-
         this.dirtyLines(this.y);
     } else {
         console.error('Undefined behaviour for eraseInLine.');
