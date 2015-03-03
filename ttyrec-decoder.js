@@ -168,12 +168,8 @@ TTYDecoder.prototype.eraseData = function (n) {
         this.initRows(HEIGHT - this.y);
 
         this.dirtyLine(this.x, WIDTH);
+        this.dirtyLines(this.y + 1, HEIGHT);
 
-        if (this.updateLines['-1'] == undefined) {
-            for (j = this.y + 1; j <= HEIGHT; j++) {
-                this.updateLines[j] = true;
-            }
-        }
     } else if (n == 1) {
         // Clear from the cursor to beginning of buffer.
         for (i = 0; i < this.y - 1; i++) {
@@ -655,6 +651,14 @@ TTYDecoder.prototype.dirtyLine = function (min, max) {
         this.updateLines[this.y] == undefined) {
         for (var i = min; i <= max; i++) {
             this.updateChars[this.y + '_' + i] = true;
+        }
+    }
+};
+
+TTYDecoder.prototype.dirtyLines = function (min, max) {
+    if (this.updateLines['-1'] == undefined) {
+        for (var i = min; i <= max; i++) {
+            this.updateLines[i] = true;
         }
     }
 };
