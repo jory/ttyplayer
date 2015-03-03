@@ -164,10 +164,10 @@ TTYDecoder.prototype.eraseData = function (n) {
     if (n == 0) {
         // Clear from the cursor to the end of the buffer.
         this.buffer[this.y - 1].splice(this.x - 1);
+        this.dirtyInline(this.x, WIDTH);
+
         this.buffer.splice(this.y);
         this.initRows(HEIGHT - this.y);
-
-        this.dirtyInline(this.x, WIDTH);
         this.dirtyLines(this.y + 1, HEIGHT);
 
     } else if (n == 1) {
@@ -227,12 +227,7 @@ TTYDecoder.prototype.eraseCharacters = function (n) {
         this.buffer[this.y - 1][this.x - 1 + i] = undefined;
     }
 
-    if (this.updateLines['-1'] == undefined &&
-        this.updateLines[this.y] == undefined) {
-        for (var j = 0; i < n; i++) {
-            this.updateChars[this.y + '_' + (this.x + i)] = true;
-        }
-    }
+    this.dirtyInline(this.x, n);
 };
 
 TTYDecoder.prototype.deleteLine = function (n) {
@@ -253,12 +248,7 @@ TTYDecoder.prototype.deleteCharacter = function (n) {
 
     this.buffer[this.y - 1].splice(this.x - 1, n);
 
-    if (this.updateLines['-1'] == undefined &&
-        this.updateLines[this.y] == undefined) {
-        for (var i = 0; i <= (WIDTH - this.x); i++) {
-            this.updateChars[this.y + '_' + (this.x + i)] = true;
-        }
-    }
+    this.dirtyInline(this.x, WIDTH);
 };
 
 TTYDecoder.prototype.insertLine = function (n) {
