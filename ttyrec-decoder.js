@@ -7,74 +7,6 @@ var WIDTH = 80;
 var regexp = new RegExp('\\x1b[[]([?]?[0-9;]*)([A-Za-z])');
 var partRegexp = new RegExp('\\x1b([[][?]?[0-9;]*)?');
 
-module.exports = function (parsed, callback) {
-    var store_buffer = function () {
-
-        var previousFrame = ttyrec.frames[numFrames];
-
-        var newFrame = [];
-        for (var i = 0; i < HEIGHT; i++) {
-            newFrame[i] = new Array(WIDTH);
-            for (var j = 0; j < WIDTH; j++) {
-                var prev = previousFrame[i][j];
-                if (typeof prev === "object") {
-                    newFrame[i][j] = numFrames;
-                } else if (typeof prev === "number"){
-                    newFrame[i][j] = prev;
-                } else {
-                    console.warn("UHOH!");
-                }
-            }
-        }
-
-        if (update_lines['-1']) {
-            update_chars = {};
-            update_lines = {};
-
-            var m = buffer.length;
-            for (var n = 1; n <= m; n++) {
-                update_lines[n] = true;
-            }
-        }
-
-        for (var point in update_chars) {
-            var points = point.split('_');
-            var x = parseInt(points[0]) - 1;
-            var y = parseInt(points[1]) - 1;
-
-            // Skip any character that will be covered by a line printing.
-            if (update_lines[points[0]]) {
-                continue;
-            }
-
-            var char = buffer[x][y];
-            if (char === undefined) char = store_character(' ');
-            newFrame[x][y] = char;
-        }
-
-        for (var line in update_lines) {
-            var i = parseInt(line) - 1;
-            for (var j = 0; j < WIDTH; j++) {
-                var char = buffer[i][j];
-                if (char === undefined) char = store_character(' ');
-                newFrame[i][j] = char;
-            }
-        }
-
-        update_chars = {};
-        update_lines = {};
-
-        ttyrec.frames[++numFrames] = newFrame;
-    };
-
-    var store_frame = function() {
-        if (should_print) {
-            store_buffer();
-            should_print = false;
-        }
-    };
-};
-
 function TTYDecoder (parsed, callback) {
     if (!(this instanceof TTYDecoder)) {
         return new TTYDecoder(parsed, callback);
@@ -89,8 +21,8 @@ function TTYDecoder (parsed, callback) {
     for (var i = 0, il = parsed.positions.length; i < il; i++) {
         var current = parsed.positions[i];
 
-        render_frame(parsed.blob.slice(current.start, current.end));
-        store_frame();
+        this.renderFrame(parsed.blob.slice(current.start, current.end));
+        this.storeFrame();
 
         var next = parsed.positions[i + 1];
         if (next) {
@@ -109,10 +41,12 @@ function TTYDecoder (parsed, callback) {
         }
     }
 
-    callback(null, ttyrec);
+    callback(null, this);
 
     return this;
 };
+
+module.exports = TTYDecoder;
 
 TTYDecoder.prototype.resetBuffer = function () {
     this.resetCursor();
@@ -123,7 +57,7 @@ TTYDecoder.prototype.resetBuffer = function () {
     for (var i = 0; i < HEIGHT; i++) {
         this.buffer[i] = new Array(WIDTH);
         for (var j = 0; j < WIDTH; j++) {
-            this.buffer[i][j] = store_character(' ');
+            this.buffer[i][j] = this.storeCharacter(' ');
         }
     }
 
@@ -459,38 +393,34 @@ TTYDecoder.prototype.renderFrame = function (string) {
     this.prepend = '';
 
     // Remove shift-in and shift-out, as I have no idea what to do with them.
-    string = string.replace(/\x0f/g, '');
-    string = string.replace(/\x0e/g, '');
+    this.string = this.string.replace(/(\x0f|\x0e)/g, '');
 
-    if (cursor.show) {
-        buffer[cursor.y - 1][cursor.x - 1] = store_character(' ');
-        update_chars[cursor.y + '_' + cursor.x] = true;
+    if (this.show) {
+        this.buffer[this.y - 1][this.x - 1] = this.storeCharacter(' ');
+        this.updateChars[this.y + '_' + this.x] = true;
     }
 
-    while (string != '') {
-        var i = string.search(regexp);
+    while (this.string != '') {
+        var i = this.string.search(regexp);
 
         if (i == -1) {
             // Have to see if the last few characters are a code that's been cut-off.
-            if (string.search(partRegexp) != -1) {
-                pre_pend = string;
-                string = '';
+            if (this.string.search(partRegexp) != -1) {
+                this.prepend = this.string;
+                this.string = '';
+            } else {
+                this.outputCharacters(i);
             }
-            else {
-                output_characters(i);
-            }
-        }
-        else if (i > 0) {
-            output_characters(i);
-        }
-        else if (i == 0) {
-            handle_esc();
+        } else if (i > 0) {
+            this.outputCharacters(i);
+        } else if (i == 0) {
+            this.handleEsc();
         }
     }
 
-    if (cursor.show) {
-        buffer[cursor.y - 1][cursor.x - 1] = store_character('_');
-        update_chars[cursor.y + '_' + cursor.x] = true;
+    if (this.show) {
+        this.buffer[this.y - 1][this.x - 1] = this.storeCharacter('_');
+        this.updateChars[this.y + '_' + this.x] = true;
     }
 };
 
@@ -671,6 +601,75 @@ TTYDecoder.prototype.storeCharacter = function (char) {
         background: this.negative ? foreground : background
     };
 };
+
+TTYDecoder.prototype.storeBuffer = function () {
+
+    var numFrames = this.frames.length - 1;
+
+    var previousFrame = this.frames[numFrames];
+    var newFrame = [];
+
+    for (var i = 0; i < HEIGHT; i++) {
+        newFrame[i] = new Array(WIDTH);
+        for (var j = 0; j < WIDTH; j++) {
+            var prev = previousFrame[i][j];
+            if (typeof prev === "object") {
+                newFrame[i][j] = numFrames;
+            } else if (typeof prev === "number"){
+                newFrame[i][j] = prev;
+            } else {
+                console.warn("UHOH!");
+            }
+        }
+    }
+
+    if (this.updateLines['-1']) {
+        this.updateChars = {};
+        this.updateLines = {};
+
+        var m = this.buffer.length;
+        for (var n = 1; n <= m; n++) {
+            this.updateLines[n] = true;
+        }
+    }
+
+    for (var point in this.updateChars) {
+        var points = point.split('_');
+        var x = parseInt(points[0]) - 1;
+        var y = parseInt(points[1]) - 1;
+
+        // Skip any character that will be covered by a line printing.
+        if (this.updateLines[points[0]]) {
+            continue;
+        }
+
+        var char = this.buffer[x][y];
+        if (char === undefined) char = this.storeCharacter(' ');
+        newFrame[x][y] = char;
+    }
+
+    for (var line in this.updateLines) {
+        var i = parseInt(line) - 1;
+        for (var j = 0; j < WIDTH; j++) {
+            var char = this.buffer[i][j];
+            if (char === undefined) char = this.storeCharacter(' ');
+            newFrame[i][j] = char;
+        }
+    }
+
+    this.updateChars = {};
+    this.updateLines = {};
+
+    this.frames[++numFrames] = newFrame;
+};
+
+TTYDecoder.prototype.storeFrame = function() {
+    if (this.shouldPrint) {
+        this.storeBuffer();
+        this.shouldPrint = false;
+    }
+};
+
 
 function capitalize (string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
