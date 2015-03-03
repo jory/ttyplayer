@@ -192,7 +192,7 @@ TTYDecoder.prototype.eraseData = function (n) {
 
         this.initRows(HEIGHT - this.y);
 
-        this.updateLines['-1'] = true;
+        this.dirtyLines(-1);
     } else {
         console.error('Undefined behaviour for eraseData.');
     }
@@ -355,7 +355,7 @@ TTYDecoder.prototype.renderFrame = function (string) {
 
     if (this.show) {
         this.buffer[this.y - 1][this.x - 1] = this.storeCharacter(' ');
-        this.updateChars[this.y + '_' + this.x] = true;
+        this.dirtyInline(this.x);
     }
 
     while (this.string != '') {
@@ -378,7 +378,7 @@ TTYDecoder.prototype.renderFrame = function (string) {
 
     if (this.show) {
         this.buffer[this.y - 1][this.x - 1] = this.storeCharacter('_');
-        this.updateChars[this.y + '_' + this.x] = true;
+        this.dirtyInline(this.x);
     }
 };
 
@@ -409,11 +409,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
                 // Backspace
                 if (this.show) {
                     this.buffer[this.y - 1][this.x - 1] = undefined;
-
-                    if (this.updateLines['-1'] == undefined &&
-                        this.updateLines[this.y] == undefined) {
-                        this.updateChars[this.y + '_' + this.x] = true;
-                    }
+                    this.dirtyInline(this.x);
                 }
                 this.x--;
 
@@ -437,7 +433,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
                     this.buffer[this.y - 1] = [];
                 }
 
-                this.updateLines[this.y] = true;
+                this.dirtyLines(this.y);
 
             } else if (code == 27) {
                 // ESC
@@ -465,12 +461,7 @@ TTYDecoder.prototype.outputCharacters = function (index) {
         } else {
             this.buffer[this.y - 1][this.x - 1] = this.storeCharacter(character);
 
-            if (this.updateLines['-1'] == undefined &&
-                this.updateLines[this.y] == undefined) {
-                this.updateChars[this.y + '_' + this.x] = true;
-            }
-
-            this.x++;
+            this.dirtyInline(this.x++);
         }
     }
     this.shouldPrint = true;
@@ -614,6 +605,8 @@ TTYDecoder.prototype.storeBuffer = function () {
 };
 
 TTYDecoder.prototype.dirtyInline = function (min, max) {
+    if (max == undefined) max = min;
+
     if (this.updateLines['-1'] == undefined &&
         this.updateLines[this.y] == undefined) {
         for (var i = min; i <= max; i++) {
